@@ -1,15 +1,15 @@
 pub struct App {
-    // Example stuff:
     label: String,
     value: f32,
+    show_fullscreen_prompt: bool,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            // Example stuff:
             label: "Welcome to Lord's Simulator".to_owned(),
             value: 2.7,
+            show_fullscreen_prompt: true,
         }
     }
 }
@@ -17,8 +17,7 @@ impl Default for App {
 impl App {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+        cc.egui_ctx.set_zoom_factor(2.0);
         Default::default()
     }
 }
@@ -30,10 +29,7 @@ impl eframe::App for App {
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
             egui::MenuBar::new().ui(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("File", |ui| {
@@ -48,45 +44,70 @@ impl eframe::App for App {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Lord's Simulator");
-
+        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label("I love text: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/thelordman/lords_simulator",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add(egui::github_link_file!(
+                        "https://github.com/thelordman/lords_simulator/blob/main/",
+                        "Source code"
+                    ));
+                });
             });
         });
-    }
-}
 
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.heading("Lord's Simulator");
+
+                ui.label("I love text: ");
+                ui.text_edit_singleline(&mut self.label);
+                ui.add_sized(
+                    [200.0, 20.0],
+                    egui::Slider::new(&mut self.value, 0.0..=10.0).text("value")
+                );
+                if ui.button("Increment").clicked() {
+                    self.value += 1.0;
+                }
+            });
+        });
+
+        if self.show_fullscreen_prompt {
+            let mut open = self.show_fullscreen_prompt;
+            egui::Window::new("Fullscreen?")
+                .open(&mut open)
+                .movable(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -20.0])
+                .show(ctx, |ui| {
+                ui.label("Can later be configured through the options menu.");
+                ui.horizontal(|ui| {
+                    if ui.button("Enable").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+                        self.show_fullscreen_prompt = false;
+                    }
+                    if ui.button("Borderless windowed").clicked() {
+                        if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
+                            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::Pos2::ZERO));
+                            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(monitor));
+                            self.show_fullscreen_prompt = false;
+                        } else {
+                            log::warn!("Could not determine monitor size for borderless window, maximizing instead");
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+                            self.show_fullscreen_prompt = false;
+                        }
+                    }
+                    if ui.button("Keep windowed").clicked() {
+                        self.show_fullscreen_prompt = false;
+                    }
+                })
+            });
+            if !open {
+                self.show_fullscreen_prompt = false;
+            }
+        }
+    }
 }
