@@ -2,9 +2,9 @@
 name = "lords_simulator"
 version = "0.1.0"
 authors = ["Lord"]
-edition = "2021"
+edition = "2024"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
-rust-version = "1.87"
+rust-version = "1.92.0"
 license = "MIT OR Apache-2.0"
 
 [package.metadata.docs.rs]
@@ -20,7 +20,7 @@ eframe = { version = "0.33.3", default-features = false, features = [
     "wayland",       # To support Linux (and CI)
     "x11",           # To support older Linux distributions (restores one of the default features)
 ] }
-log = "0.4.27"
+log = "0.4.29"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
