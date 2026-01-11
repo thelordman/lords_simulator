@@ -10,7 +10,7 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add(egui::github_link_file!(
                         "https://github.com/thelordman/lords_simulator/blob/main/",
-                        "Source code"
+                        "Source Code"
                     ));
             });
         });
@@ -32,39 +32,44 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
         });
     });
 
-    if app.show_fullscreen_prompt {
-        let mut open = app.show_fullscreen_prompt;
-        egui::Window::new("Fullscreen?")
-            .open(&mut open)
-            .movable(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -20.0])
-            .show(ctx, |ui| {
-                ui.label("Can later be configured through the options menu.");
-                ui.horizontal(|ui| {
-                    if ui.button("Enable").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
-                        app.show_fullscreen_prompt = false;
-                    }
-                    if ui.button("Borderless Windowed").clicked() {
-                        if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
-                            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::Pos2::ZERO));
-                            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(monitor));
-                        } else {
-                            log::warn!("Could not determine monitor size for borderless window, maximizing instead");
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
-                        }
-                        app.show_fullscreen_prompt = false;
-                    }
-                    if ui.button("Keep Windowed").clicked() {
-                        app.show_fullscreen_prompt = false;
-                    }
-                })
-            });
-        if !open {
-            app.show_fullscreen_prompt = false;
-        }
+    if app.main_menu_data.show_fullscreen_prompt {
+        app.main_menu_data.show_fullscreen_prompt = fullscreen_prompt(ctx, app.main_menu_data.show_fullscreen_prompt);
     }
+}
+
+fn fullscreen_prompt(ctx: &egui::Context, mut show_fullscreen_prompt: bool) -> bool {
+    let mut open = show_fullscreen_prompt;
+    egui::Window::new("Fullscreen?")
+        .open(&mut open)
+        .movable(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -20.0])
+        .show(ctx, |ui| {
+            ui.label("Can later be configured through the options menu.");
+            ui.horizontal(|ui| {
+                if ui.button("Enable").clicked() {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+                    show_fullscreen_prompt = false;
+                }
+                if ui.button("Borderless Windowed").clicked() {
+                    if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::Pos2::ZERO));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(monitor));
+                    } else {
+                        log::warn!("Could not determine monitor size for borderless window, maximizing instead");
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+                    }
+                    show_fullscreen_prompt = false;
+                }
+                if ui.button("Keep Windowed").clicked() {
+                    show_fullscreen_prompt = false;
+                }
+            })
+        });
+    if !open {
+        show_fullscreen_prompt = false;
+    }
+    show_fullscreen_prompt
 }

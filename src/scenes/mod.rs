@@ -8,6 +8,10 @@ pub enum Scene {
     CharacterCreation,
 }
 
+pub struct MainMenuData {
+    pub show_fullscreen_prompt: bool,
+}
+
 pub fn draw_scene(app: &mut App, ctx: &egui::Context) {
     match app.scene {
         Scene::MainMenu => main_menu::ui(app, ctx),
