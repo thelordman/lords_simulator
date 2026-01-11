@@ -4,17 +4,17 @@ use crate::scenes;
 pub struct App {
     pub scene: scenes::Scene,
 
-    pub ui_scale: f32,
+    pub main_menu_data: scenes::MainMenuData,
 
-    pub show_fullscreen_prompt: bool,
+    pub ui_scale: f32,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             scene: scenes::Scene::MainMenu,
+            main_menu_data: scenes::MainMenuData { show_fullscreen_prompt: true },
             ui_scale: 2.0,
-            show_fullscreen_prompt: true,
         }
     }
 }
