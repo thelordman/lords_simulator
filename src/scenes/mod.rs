@@ -1,21 +1,17 @@
 use crate::App;
 
-mod main_menu;
-mod character_creation;
+pub mod main_menu;
+pub mod character_creation;
 
 pub enum Scene {
     MainMenu,
     CharacterCreation,
 }
 
-pub struct MainMenuData {
-    pub show_fullscreen_prompt: bool,
-}
-
 pub fn draw_scene(app: &mut App, ctx: &egui::Context) {
     match app.scene {
         Scene::MainMenu => main_menu::ui(app, ctx),
-        Scene::CharacterCreation => character_creation::ui(ctx),
+        Scene::CharacterCreation => character_creation::ui(app, ctx),
     }
 }
 
