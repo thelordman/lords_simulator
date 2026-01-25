@@ -1,5 +1,9 @@
 use crate::{scenes, App};
 
+pub struct MainMenuData {
+    pub show_fullscreen_prompt: bool,
+}
+
 pub fn ui(app: &mut App, ctx: &egui::Context) {
     scenes::top_panel(ctx);
 
