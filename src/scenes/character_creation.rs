@@ -1,13 +1,43 @@
+use egui::panel::Side;
 use crate::{scenes, App};
 
 pub struct CharacterCreationData {
     pub first_name: String,
     pub last_name: String,
     pub middle_names: Vec<String>,
+    
+    pub sex: Option<Sex>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Sex {
+    Male,
+    Female,
 }
 
 pub fn ui(app: &mut App, ctx: &egui::Context) {
     scenes::top_panel(ctx);
+
+    egui::SidePanel::new(Side::Left, "left_panel").show(ctx, |ui| {
+        ui.label(
+            egui::RichText::new("Sex")
+                .size(25.0)
+                .strong()
+        );
+
+        let mut sex = app.character_creation_data.sex;
+        
+        ui.horizontal(|ui| {
+            if ui.selectable_label(sex.is_some_and(|sex| sex == Sex::Male), "Male").clicked() {
+                sex = Some(Sex::Male);
+            }
+            if ui.selectable_label(sex.is_some_and(|sex| sex == Sex::Female), "Female").clicked() {
+                sex = Some(Sex::Female);
+            }
+        });
+
+        app.character_creation_data.sex = sex;
+    });
 
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.vertical_centered(|ui| {

@@ -15,7 +15,12 @@ impl Default for App {
             scene: scenes::Scene::MainMenu,
 
             main_menu_data: scenes::main_menu::MainMenuData { show_fullscreen_prompt: true },
-            character_creation_data: scenes::character_creation::CharacterCreationData { first_name: String::new(), last_name: String::new(), middle_names: Vec::new() },
+            character_creation_data: scenes::character_creation::CharacterCreationData {
+                first_name: String::new(),
+                last_name: String::new(),
+                middle_names: Vec::new(),
+                sex: None,
+            },
 
             ui_scale: 2.0,
         }
