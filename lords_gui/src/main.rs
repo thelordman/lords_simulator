@@ -9,7 +9,7 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_maximized(true)
             .with_icon(
-                eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])
+                eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])
                     .expect("Failed to load icon"),
             ),
         ..Default::default()
@@ -17,6 +17,6 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Lord's Simulator",
         native_options,
-        Box::new(|cc| Ok(Box::new(lords_simulator::App::new(cc)))),
+        Box::new(|cc| Ok(Box::new(lords_gui::App::new(cc)))),
     )
 }
