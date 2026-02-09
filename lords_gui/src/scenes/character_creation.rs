@@ -80,6 +80,14 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
 
             add_name_field(ui, text_box_width, &mut app.character_creation_data.last_name, "Last Name");
         });
+
+        ui.add_space(25.0);
+        
+        ui.vertical_centered(|ui| {
+            if ui.button(egui::RichText::new("Start").size(50.0)).clicked() {
+                app.scene = scenes::Scene::Overview;
+            }
+        });
     });
 }
 

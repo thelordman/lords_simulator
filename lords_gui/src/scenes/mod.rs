@@ -2,16 +2,19 @@ use crate::App;
 
 pub mod main_menu;
 pub mod character_creation;
+pub mod overview;
 
 pub enum Scene {
     MainMenu,
     CharacterCreation,
+    Overview,
 }
 
 pub fn draw_scene(app: &mut App, ctx: &egui::Context) {
     match app.scene {
         Scene::MainMenu => main_menu::ui(app, ctx),
         Scene::CharacterCreation => character_creation::ui(app, ctx),
+        Scene::Overview => overview::ui(app, ctx),
     }
 }
 
@@ -27,8 +30,6 @@ fn top_panel(ctx: &egui::Context) {
                 });
                 ui.add_space(16.0);
             }
-
-            egui::widgets::global_theme_preference_buttons(ui);
         });
     });
 }
