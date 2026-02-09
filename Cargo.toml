@@ -1,3 +1,11 @@
 [workspace]
 resolver = "3"
 members = ["lords_gui", "lords_sim"]
+
+[profile.release]
+opt-level = 3
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[patch.crates-io]
