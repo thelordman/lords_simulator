@@ -1491,6 +1491,7 @@ dependencies = [
  "egui",
  "env_logger",
  "log",
+ "lords_sim",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 use egui::panel::Side;
 use crate::{scenes, App};
+use lords_sim::Sex;
 
 pub struct CharacterCreationData {
     pub first_name: String,
@@ -7,12 +8,6 @@ pub struct CharacterCreationData {
     pub middle_names: Vec<String>,
     
     pub sex: Option<Sex>,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Sex {
-    Male,
-    Female,
 }
 
 pub fn ui(app: &mut App, ctx: &egui::Context) {
