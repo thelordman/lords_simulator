@@ -10,6 +10,10 @@ pub struct Name {
     last: String,
 }
 
-pub fn start(name: Name, sex: Sex) {
+pub fn run(name: Name, sex: Sex) {
     
+}
+
+pub fn tick() {
+
 }
