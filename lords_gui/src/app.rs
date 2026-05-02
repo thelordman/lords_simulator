@@ -1,6 +1,10 @@
+use lords_runtime::SimRunner;
+use lords_sim::State;
 use crate::scenes;
 
 pub struct App {
+    pub sim_runner: Option<SimRunner>,
+
     pub scene: scenes::Scene,
 
     pub main_menu_data: scenes::main_menu::MainMenuData,
@@ -12,6 +16,8 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
+            sim_runner: None,
+
             scene: scenes::Scene::MainMenu,
 
             main_menu_data: scenes::main_menu::MainMenuData { show_fullscreen_prompt: true },
@@ -32,6 +38,10 @@ impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_zoom_factor(2.0);
         Default::default()
+    }
+
+    pub fn state(&self) -> State {
+        self.sim_runner.as_ref().unwrap().state.read().unwrap().clone()
     }
 }
 

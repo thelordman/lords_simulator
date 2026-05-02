@@ -13,6 +13,7 @@ targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
 lords_sim = { path = "../lords_sim" }
+lords_runtime = { path = "../lords_runtime" }
 egui = "0.33.3"
 eframe = { version = "0.33.3", default-features = false, features = [
     "default_fonts",
