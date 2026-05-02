@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["lords_gui", "lords_sim"]
+members = ["lords_gui", "lords_runtime", "lords_sim"]
 
 [profile.release]
 opt-level = 3

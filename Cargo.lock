@@ -1528,6 +1528,14 @@ dependencies = [
  "egui",
  "env_logger",
  "log",
+ "lords_runtime",
+ "lords_sim",
+]
+
+[[package]]
+name = "lords_runtime"
+version = "0.1.0"
+dependencies = [
  "lords_sim",
 ]
 
