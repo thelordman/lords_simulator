@@ -1,0 +1,11 @@
+[package]
+name = "lords_runtime"
+version = "0.1.0"
+authors = ["Lord"]
+edition = "2024"
+include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+rust-version = "1.92.0"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+lords_sim = { path = "../lords_sim" }

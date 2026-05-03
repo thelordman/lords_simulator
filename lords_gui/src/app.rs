@@ -48,6 +48,7 @@ impl App {
 impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint_after(std::time::Duration::from_secs(1));
         scenes::draw_scene(self, ctx);
     }
 }
