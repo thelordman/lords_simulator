@@ -34,7 +34,7 @@ impl Runtime {
 
                 if !paused {
                     sim.tick();
-                    *state_clone.write().unwrap() = sim.state.clone();
+                    *state_clone.write().expect("Runtime state RwLock poisoned") = sim.state.clone();
                     let _ = tick_tx.send(());
                 }
 

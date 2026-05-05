@@ -27,7 +27,7 @@ pub struct State {
 
 impl State {
     pub fn new(name: Name, sex: Sex) -> Self {
-        Self { name, sex, time: Time::new() }
+        Self { name, sex, time: Time::default() }
     }
 }
 
@@ -72,10 +72,15 @@ pub struct Time {
     tick: u64
 }
 
+impl Default for Time {
+    fn default() -> Self {
+        Self { tick: 0 }
+    }
+}
 
 impl Time {
     pub fn new() -> Self {
-        Self { tick: 0 }
+        Self::default()
     }
 
     pub fn advance(&mut self) {
