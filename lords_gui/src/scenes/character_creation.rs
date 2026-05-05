@@ -81,16 +81,11 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
         ui.vertical_centered(|ui| {
             if ui.button(egui::RichText::new("Start").size(50.0)).clicked() {
                 if app.character_creation_data.sex.is_some() {
-                    app.scene = scenes::Scene::Overview;
-                    
-                    app.sim_runner = Some(lords_runtime::SimRunner::new(lords_sim::Simulation::new(
-                        lords_sim::Name::new(
+                    app.start_runtime(lords_sim::Name::new(
                             app.character_creation_data.first_name.clone(),
                             app.character_creation_data.middle_names.clone(),
                             app.character_creation_data.last_name.clone(),
-                        ),
-                        app.character_creation_data.sex.unwrap()
-                    )))
+                    ), app.character_creation_data.sex.unwrap());
                 }
             }
         });

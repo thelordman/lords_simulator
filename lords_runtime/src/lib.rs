@@ -1,20 +1,23 @@
+#![warn(clippy::all, rust_2018_idioms)]
+
 use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Instant;
 use lords_sim::Simulation;
 
 pub const TICKS_PER_SECOND: u64 = 1;
 
-pub struct SimRunner {
+pub struct Runtime {
     pub state: Arc<RwLock<lords_sim::State>>,
     cmd_tx: Sender<Command>,
 }
 
-impl SimRunner {
-    pub fn new(mut sim: Simulation) -> Self {
+impl Runtime {
+    pub fn new(mut sim: Simulation) -> (Self, Receiver<()>) {
         let state = Arc::new(RwLock::new(sim.state.clone()));
         let state_clone = Arc::clone(&state);
         let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
+        let (tick_tx, tick_rx) = mpsc::channel::<()>();
         let tick_interval = std::time::Duration::from_secs(TICKS_PER_SECOND);
         let mut next_tick = Instant::now() + tick_interval;
 
@@ -32,6 +35,7 @@ impl SimRunner {
                 if !paused {
                     sim.tick();
                     *state_clone.write().unwrap() = sim.state.clone();
+                    let _ = tick_tx.send(());
                 }
 
                 let now = Instant::now();
@@ -43,7 +47,7 @@ impl SimRunner {
             }
         });
 
-        Self { state, cmd_tx }
+        (Self { state, cmd_tx }, tick_rx)
     }
 
     pub fn pause(&self)  {

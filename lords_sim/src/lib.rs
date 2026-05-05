@@ -1,3 +1,5 @@
+#![warn(clippy::all, rust_2018_idioms)]
+
 use std::fmt::{Display, Formatter};
 
 pub const TICKS_PER_SECOND: u64 = 1;

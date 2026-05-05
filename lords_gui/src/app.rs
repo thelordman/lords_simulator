@@ -1,9 +1,11 @@
-use lords_runtime::SimRunner;
-use lords_sim::State;
+use lords_runtime::Runtime;
+use lords_sim::{Name, Sex, State};
 use crate::scenes;
 
 pub struct App {
-    pub sim_runner: Option<SimRunner>,
+    ctx: egui::Context,
+
+    pub runtime: Option<Runtime>,
 
     pub scene: scenes::Scene,
 
@@ -13,10 +15,15 @@ pub struct App {
     pub ui_scale: f32,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    /// Called once before the first frame.
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx.set_zoom_factor(2.0);
+
         Self {
-            sim_runner: None,
+            ctx: cc.egui_ctx.clone(),
+
+            runtime: None,
 
             scene: scenes::Scene::MainMenu,
 
@@ -31,24 +38,30 @@ impl Default for App {
             ui_scale: 2.0,
         }
     }
-}
-
-impl App {
-    /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_zoom_factor(2.0);
-        Default::default()
-    }
 
     pub fn state(&self) -> State {
-        self.sim_runner.as_ref().unwrap().state.read().unwrap().clone()
+        self.runtime.as_ref().unwrap().state.read().unwrap().clone()
+    }
+
+    pub fn start_runtime(&mut self, name: Name, sex: Sex) {
+        self.scene = scenes::Scene::Overview;
+
+        let (runtime, tick_rx) = Runtime::new(lords_sim::Simulation::new(name, sex));
+
+        let ctx = self.ctx.clone();
+        std::thread::spawn(move || {
+            while tick_rx.recv().is_ok() {
+                ctx.request_repaint();
+            }
+        });
+
+        self.runtime = Some(runtime);
     }
 }
 
 impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint_after(std::time::Duration::from_secs(1));
         scenes::draw_scene(self, ctx);
     }
 }
