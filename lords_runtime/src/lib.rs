@@ -5,7 +5,8 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Instant;
 use lords_sim::Simulation;
 
-pub const TICKS_PER_SECOND: u64 = 1;
+/// Number of real-time seconds per tick.
+pub const TICK_INTERVAL: u64 = 1;
 
 pub struct Runtime {
     pub state: Arc<RwLock<lords_sim::State>>,
@@ -18,7 +19,7 @@ impl Runtime {
         let state_clone = Arc::clone(&state);
         let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
         let (tick_tx, tick_rx) = mpsc::channel::<()>();
-        let tick_interval = std::time::Duration::from_secs(TICKS_PER_SECOND);
+        let tick_interval = std::time::Duration::from_secs(TICK_INTERVAL);
         let mut next_tick = Instant::now() + tick_interval;
 
         std::thread::spawn(move || {

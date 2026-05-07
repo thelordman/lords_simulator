@@ -1,8 +1,9 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
-use std::fmt::{Display, Formatter};
+mod time;
 
-pub const TICKS_PER_SECOND: u64 = 1;
+use time::Time;
+use std::fmt::{Display, Formatter};
 
 pub struct Simulation {
     pub state: State,
@@ -31,7 +32,7 @@ impl State {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Name {
     pub first: String,
     pub middle: Vec<String>,
@@ -64,60 +65,5 @@ pub enum Sex {
 impl Display for Sex {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Time {
-    tick: u64
-}
-
-impl Default for Time {
-    fn default() -> Self {
-        Self { tick: 0 }
-    }
-}
-
-impl Time {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn advance(&mut self) {
-        self.tick += 1;
-    }
-    
-    pub fn zero(&mut self) {
-        self.tick = 0;
-    }
-
-    pub fn seconds(self) -> u64 {
-        self.tick / TICKS_PER_SECOND
-    }
-
-    pub fn minutes(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60)
-    }
-
-    pub fn hours(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60)
-    }
-
-    pub fn days(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24)
-    }
-
-    pub fn weeks(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 7)
-    }
-
-    // TODO: Proper month system
-    pub fn months(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 30)
-    }
-
-    // TODO: Leap years
-    pub fn years(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 365)
     }
 }
