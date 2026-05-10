@@ -19,33 +19,33 @@ impl Time {
         self.tick = 0;
     }
 
-    pub fn seconds(self) -> u64 {
+    pub const fn seconds(self) -> u64 {
         self.tick / TICKS_PER_SECOND
     }
 
-    pub fn minutes(self) -> u64 {
+    pub const fn minutes(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60)
     }
 
-    pub fn hours(self) -> u64 {
+    pub const fn hours(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60 * 60)
     }
 
-    pub fn days(self) -> u64 {
+    pub const fn days(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60 * 60 * 24)
     }
 
-    pub fn weeks(self) -> u64 {
+    pub const fn weeks(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 7)
     }
 
     // TODO: Proper month system
-    pub fn months(self) -> u64 {
+    pub const fn months(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 30)
     }
 
     // TODO: Leap years
-    pub fn years(self) -> u64 {
+    pub const fn years(self) -> u64 {
         self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 365)
     }
 }

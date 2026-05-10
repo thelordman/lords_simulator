@@ -45,6 +45,7 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
             ui.add_space(25.0);
         });
 
+        // TODO: Replace hard-coded layout
         let text_box_width = 150.0;
         let add_button_width = 20.0;
         let text_box_count = app.character_creation_data.middle_names.len() as f32 + 2.0;

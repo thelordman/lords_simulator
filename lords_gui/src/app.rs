@@ -11,8 +11,6 @@ pub struct App {
 
     pub main_menu_data: scenes::main_menu::MainMenuData,
     pub character_creation_data: scenes::character_creation::CharacterCreationData,
-
-    pub ui_scale: f32,
 }
 
 impl App {
@@ -34,11 +32,10 @@ impl App {
                 middle_names: Vec::new(),
                 sex: None,
             },
-
-            ui_scale: 2.0,
         }
     }
 
+    // TODO: This will be cleaned up once the state gets more complex
     pub fn state(&self) -> State {
         self.runtime.as_ref().unwrap().state.read().unwrap().clone()
     }

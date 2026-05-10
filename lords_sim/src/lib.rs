@@ -2,7 +2,7 @@
 
 mod time;
 
-use time::Time;
+pub use time::Time;
 use std::fmt::{Display, Formatter};
 
 pub struct Simulation {
@@ -45,14 +45,11 @@ impl Name {
     }
 
     pub fn full_name(&self) -> String {
-        let mut name = self.first.clone();
-        for middle in &self.middle {
-            name.push_str(" ");
-            name.push_str(middle);
-        }
-        name.push_str(" ");
-        name.push_str(&self.last);
-        name
+        std::iter::once(self.first.as_str())
+            .chain(self.middle.iter().map(|s| s.as_str()))
+            .chain(std::iter::once(self.last.as_str()))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 

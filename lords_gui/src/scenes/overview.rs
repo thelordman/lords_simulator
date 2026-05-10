@@ -1,12 +1,13 @@
-use crate::{scenes, App};
+use crate::{datetime::DateTime, scenes, App};
 
 pub fn ui(app: &mut App, ctx: &egui::Context) {
     scenes::top_panel(ctx);
 
+    let name = app.state().name.full_name();
+    let sex = app.state().sex;
+    let year = app.state().time.years() + 1;
+
     egui::SidePanel::left("left_panel").show(ctx, |ui| {
-        let name = app.state().name.full_name();
-        let sex = app.state().sex;
-        let year = app.state().time.years();
 
         ui.label(format!("Name: {name}"));
         ui.label(format!("Sex: {sex}"));
@@ -16,12 +17,14 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.vertical_centered(|ui| {
             ui.label(
-                egui::RichText::new("Year 1")
+                egui::RichText::new(format!("Year {year}"))
                     .size(50.0)
                     .strong()
             );
             ui.add_space(25.0);
-            ui.label(format!("Time: {} s", app.state().time.seconds()));
+            
+            let datetime = DateTime::from(app.state().time);
+            ui.label(format!("{datetime}"));
         });
     });
 }

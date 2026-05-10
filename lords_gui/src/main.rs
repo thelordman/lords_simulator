@@ -16,6 +16,7 @@ fn main() -> eframe::Result {
             ),
         ..Default::default()
     };
+
     eframe::run_native(
         "Lord's Simulator",
         native_options,
