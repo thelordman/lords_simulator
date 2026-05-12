@@ -1,3 +1,7 @@
+mod year;
+mod month;
+mod day;
+
 /// Number of ticks per in-game second.
 pub const TICKS_PER_SECOND: u64 = 1;
 
@@ -35,17 +39,19 @@ impl Time {
         self.tick / (TICKS_PER_SECOND * 60 * 60 * 24)
     }
 
-    pub const fn weeks(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 7)
+    pub const fn day(self) -> u8 {
+        day::days_from_seconds(self.tick / TICKS_PER_SECOND) + 1
     }
 
-    // TODO: Proper month system
-    pub const fn months(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 30)
+    pub const fn month(self) -> u8 {
+        month::months_from_seconds(self.tick / TICKS_PER_SECOND) + 1
     }
 
-    // TODO: Leap years
     pub const fn years(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24 * 365)
+        year::years_from_seconds(self.tick / TICKS_PER_SECOND)
+    }
+
+    pub const fn year(self) -> u64 {
+        self.years() + 1
     }
 }

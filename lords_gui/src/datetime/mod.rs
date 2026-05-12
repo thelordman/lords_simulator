@@ -40,10 +40,9 @@ impl Default for Date {
 impl From<lords_sim::Time> for Date {
     fn from(time: lords_sim::Time) -> Self {
         Self {
-            year: time.years() + 1,
-            month: (time.months() % 12) as u8 + 1,
-            // TODO: Proper month system will be applied here when it gets implemented to lords_sim::Time
-            day: (time.days() % 30) as u8 + 1,
+            year: time.year(),
+            month: time.month(),
+            day: time.day(),
         }
     }
 }
