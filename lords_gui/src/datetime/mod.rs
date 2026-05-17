@@ -63,9 +63,9 @@ pub struct Time {
 impl From<lords_sim::Time> for Time {
     fn from(time: lords_sim::Time) -> Self {
         Self {
-            hour: (time.hours() % 24) as u8,
-            minute: (time.minutes() % 60) as u8,
-            second: (time.seconds() % 60) as u8,
+            hour: time.hour(),
+            minute: time.minute(),
+            second: time.second(),
         }
     }
 }

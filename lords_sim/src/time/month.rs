@@ -16,7 +16,6 @@ pub(super) const fn months_and_days_from_seconds(seconds: u64) -> (u8, u8) {
 
     let mut months = 0;
 
-    // TODO: Binary search for O(log n) time complexity (low priority)
     while months < 12 && days >= year_months[months] {
         months += 1;
     }

@@ -31,7 +31,8 @@ const SECONDS_IN_DAY: u64 = 24 * 60 * 60;
 /// This function takes into account leap years in the way they are defined by the Gregorian calendar,
 /// with the epoch being the instant before the first second (0 seconds) of year 1 (0 years).
 ///
-/// Note that leap seconds are not considered, essentially meaning this function
+/// Note that leap seconds are not considered, essentially meaning this function follows International Atomic Time (TAI)
+/// rather than Coordinated Universal Time (UTC), which is a couple dozen seconds (37 s as of 13 May 2026) behind TAI due to leap seconds.
 pub(super) const fn years_from_seconds(seconds: u64) -> u64 {
     let (years, _days) = years_and_days_from_seconds(seconds);
 

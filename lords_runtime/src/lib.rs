@@ -29,7 +29,9 @@ impl Runtime {
                     match cmd {
                         Command::Pause  => paused = true,
                         Command::Resume => paused = false,
-                        Command::Reset  => { sim.state.time.zero(); paused = false; }
+                        Command::Reset  => {
+                            sim.state.time.zero(); paused = false;
+                        }
                     }
                 }
 
