@@ -1,8 +1,8 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Instant;
+use crossbeam_channel::{bounded, unbounded};
 use lords_sim::Simulation;
 
 /// Number of real-time seconds per tick.
@@ -10,15 +10,15 @@ pub const TICK_INTERVAL: u64 = 1;
 
 pub struct Runtime {
     pub state: Arc<RwLock<lords_sim::State>>,
-    cmd_tx: Sender<Command>,
+    cmd_tx: crossbeam_channel::Sender<Command>,
 }
 
 impl Runtime {
-    pub fn new(mut sim: Simulation) -> (Self, Receiver<()>) {
+    pub fn new(mut sim: Simulation) -> (Self, TickReceiver) {
         let state = Arc::new(RwLock::new(sim.state.clone()));
         let state_clone = Arc::clone(&state);
-        let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
-        let (tick_tx, tick_rx) = mpsc::channel::<()>();
+        let (cmd_tx, cmd_rx) = unbounded();
+        let (tick_tx, tick_rx) = bounded(0);
         let tick_interval = std::time::Duration::from_secs(TICK_INTERVAL);
         let mut next_tick = Instant::now() + tick_interval;
 
@@ -50,7 +50,7 @@ impl Runtime {
             }
         });
 
-        (Self { state, cmd_tx }, tick_rx)
+        (Self { state, cmd_tx }, TickReceiver { 0: tick_rx })
     }
 
     pub fn pause(&self)  {
@@ -61,6 +61,15 @@ impl Runtime {
     }
     pub fn reset(&self)  {
         let _ = self.cmd_tx.send(Command::Reset);
+    }
+}
+
+pub struct TickReceiver(crossbeam_channel::Receiver<()>);
+
+impl TickReceiver {
+    /// Blocks the current thread until a tick is received.
+    pub fn recv_is_ok(&self) -> bool {
+        self.0.recv().is_ok()
     }
 }
 

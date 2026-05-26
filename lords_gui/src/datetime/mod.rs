@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Display, Formatter, Write};
 
 #[derive(Default)]
 pub struct DateTime {
@@ -18,6 +18,12 @@ impl From<lords_sim::Time> for DateTime {
 impl Display for DateTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.date, self.time)
+    }
+}
+
+impl DateTime {
+    pub fn format(&self, date_order: DateOrder, date_separator: DateSeparator, time_order: TimeOrder, time_separator: TimeSeparator) -> String {
+        format!("{} {}", self.date.format(date_order, date_separator), self.time.format(time_order, time_separator))
     }
 }
 
@@ -53,6 +59,38 @@ impl Display for Date {
     }
 }
 
+pub enum DateOrder {
+    DMY,
+    MDY,
+    YMD,
+}
+
+pub enum DateSeparator {
+    Slash,
+    Period,
+    Dash,
+}
+
+impl Display for DateSeparator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DateSeparator::Slash => f.write_char('/'),
+            DateSeparator::Period => f.write_char('.'),
+            DateSeparator::Dash => f.write_char('-'),
+        }
+    }
+}
+
+impl Date {
+    pub fn format(&self, order: DateOrder, separator: DateSeparator) -> String {
+        match order {
+            DateOrder::DMY => format!("{}{separator}{}{separator}{}", self.day, self.month, self.year),
+            DateOrder::MDY => format!("{}{separator}{}{separator}{}", self.month, self.day, self.year),
+            DateOrder::YMD => format!("{}{separator}{}{separator}{}", self.year, self.month, self.day),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Time {
     hour: u8,
@@ -73,5 +111,31 @@ impl From<lords_sim::Time> for Time {
 impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "T{:02}:{:02}:{:02}Z", self.hour, self.minute, self.second)
+    }
+}
+
+pub enum TimeOrder {
+    HMS,
+}
+
+pub enum TimeSeparator {
+    Period,
+    Colon,
+}
+
+impl Display for TimeSeparator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeSeparator::Period => f.write_char('.'),
+            TimeSeparator::Colon => f.write_char(':'),
+        }
+    }
+}
+
+impl Time {
+    pub fn format(&self, order: TimeOrder, separator: TimeSeparator) -> String {
+        match order {
+            TimeOrder::HMS => format!("{:02}{separator}{:02}{separator}{:02}", self.hour, self.minute, self.second)
+        }
     }
 }

@@ -9,3 +9,4 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 lords_sim = { path = "../lords_sim" }
+crossbeam-channel = "0.5.15"

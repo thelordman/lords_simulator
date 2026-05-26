@@ -1,9 +1,11 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod time;
+mod location;
 
 pub use time::Time;
 use std::fmt::{Display, Formatter};
+use crate::location::Location;
 
 pub struct Simulation {
     pub state: State,
@@ -23,12 +25,14 @@ impl Simulation {
 pub struct State {
     pub name: Name,
     pub sex: Sex,
+
     pub time: Time,
+    pub location: Location,
 }
 
 impl State {
     pub fn new(name: Name, sex: Sex) -> Self {
-        Self { name, sex, time: Time::default() }
+        Self { name, sex, time: Time::default(), location: Location::default() }
     }
 }
 

@@ -47,7 +47,7 @@ impl App {
 
         let ctx = self.ctx.clone();
         std::thread::spawn(move || {
-            while tick_rx.recv().is_ok() {
+            while tick_rx.recv_is_ok() {
                 ctx.request_repaint();
             }
         });

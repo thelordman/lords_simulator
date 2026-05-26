@@ -1,4 +1,5 @@
 use crate::{datetime::DateTime, scenes, App};
+use crate::datetime::{DateOrder, DateSeparator, TimeOrder, TimeSeparator};
 
 pub fn ui(app: &mut App, ctx: &egui::Context) {
     scenes::top_panel(ctx);
@@ -23,8 +24,9 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
             );
             ui.add_space(25.0);
             
-            let datetime = DateTime::from(app.state().time);
-            ui.label(format!("{datetime}"));
+            let datetime = DateTime::from(app.state().time)
+                .format(DateOrder::DMY, DateSeparator::Period, TimeOrder::HMS, TimeSeparator::Colon);
+            ui.label(datetime);
         });
     });
 }
