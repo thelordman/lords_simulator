@@ -68,7 +68,7 @@ pub enum DateOrder {
 pub enum DateSeparator {
     Slash,
     Period,
-    Dash,
+    Hyphen,
 }
 
 impl Display for DateSeparator {
@@ -76,7 +76,7 @@ impl Display for DateSeparator {
         match self {
             DateSeparator::Slash => f.write_char('/'),
             DateSeparator::Period => f.write_char('.'),
-            DateSeparator::Dash => f.write_char('-'),
+            DateSeparator::Hyphen => f.write_char('-'),
         }
     }
 }
