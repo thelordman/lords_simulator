@@ -1,11 +1,12 @@
+use lords_sim::object::Living;
 use crate::{datetime::DateTime, scenes, App};
 use crate::datetime::{DateOrder, DateSeparator, TimeOrder, TimeSeparator};
 
 pub fn ui(app: &mut App, ctx: &egui::Context) {
     scenes::top_panel(ctx);
 
-    let name = app.state().name.full_name();
-    let sex = app.state().sex;
+    let name = app.state().player.name().full();
+    let sex = app.state().player.sex();
     let year = app.state().time.years() + 1;
 
     egui::SidePanel::left("left_panel").show(ctx, |ui| {

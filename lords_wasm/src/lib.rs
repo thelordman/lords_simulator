@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use lords_sim::{Name, Sex, Simulation};
+use lords_sim::object::Living;
 
 #[wasm_bindgen]
 pub struct Runtime {
@@ -44,8 +45,8 @@ impl Runtime {
             minute: state.time.minute(),
             seconds: state.time.seconds(),
             second: state.time.second(),
-            full_name: state.name.full_name(),
-            sex: state.sex.to_string(),
+            full_name: state.player.name().full(),
+            sex: state.player.sex().to_string(),
         }
     }
 }
