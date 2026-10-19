@@ -1,7 +1,7 @@
 use crate::time::year::{is_leap_year, years_and_days_from_seconds};
 
-const REGULAR_YEAR_MONTHS: [u16; 12] = [31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
-const LEAP_YEAR_MONTHS: [u16; 12] = [31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
+const CUMULATIVE_DAYS_REGULAR: [u16; 12] = [31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+const CUMULATIVE_DAYS_LEAP: [u16; 12] = [31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
 
 pub(super) const fn months_from_seconds(seconds: u64) -> u8 {
     let (months, _days) = months_and_days_from_seconds(seconds);
@@ -12,7 +12,7 @@ pub(super) const fn months_from_seconds(seconds: u64) -> u8 {
 pub(super) const fn months_and_days_from_seconds(seconds: u64) -> (u8, u8) {
     let (years, days) = years_and_days_from_seconds(seconds);
 
-    let year_months = if is_leap_year(years) { LEAP_YEAR_MONTHS } else { REGULAR_YEAR_MONTHS };
+    let year_months = if is_leap_year(years) { CUMULATIVE_DAYS_LEAP } else { CUMULATIVE_DAYS_REGULAR };
 
     let mut months = 0;
 
@@ -21,7 +21,9 @@ pub(super) const fn months_and_days_from_seconds(seconds: u64) -> (u8, u8) {
     }
 
     let days = if months == 0 { days } else { days - year_months[months - 1] };
-    assert!(days <= 31);
+
+    debug_assert!(months < 12);
+    debug_assert!(days <= 30);
 
     (months as u8, days as u8)
 }

@@ -29,6 +29,6 @@ pub struct State {
 
 impl State {
     pub fn new(name: Name, sex: Sex) -> Self {
-        Self { player: Human::new(name, sex), time: Time::default() }
+        Self { player: Human::new(Default::default(), Default::default(), name, sex), time: Time::default() }
     }
 }

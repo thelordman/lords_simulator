@@ -7,13 +7,15 @@ pub fn ui(app: &mut App, ctx: &egui::Context) {
 
     let name = app.state().player.name().full();
     let sex = app.state().player.sex();
-    let year = app.state().time.years() + 1;
+    let age = app.state().time.years();
+    
+    let year = app.state().time.year();
 
     egui::SidePanel::left("left_panel").show(ctx, |ui| {
 
         ui.label(format!("Name: {name}"));
         ui.label(format!("Sex: {sex}"));
-        ui.label(format!("Age: {year}"));
+        ui.label(format!("Age: {age}"));
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {

@@ -31,8 +31,7 @@ const SECONDS_IN_DAY: u64 = 24 * 60 * 60;
 /// This function takes into account leap years in the way they are defined by the Gregorian calendar,
 /// with the epoch being the instant before the first second (0 seconds) of year 1 (0 years).
 ///
-/// Note that leap seconds are not considered, essentially meaning this function follows International Atomic Time (TAI)
-/// rather than Coordinated Universal Time (UTC), which is a couple dozen seconds (37 s as of 13 May 2026) behind TAI due to leap seconds.
+/// Note that leap seconds are not considered.
 pub(super) const fn years_from_seconds(seconds: u64) -> u64 {
     let (years, _days) = years_and_days_from_seconds(seconds);
 
@@ -40,7 +39,6 @@ pub(super) const fn years_from_seconds(seconds: u64) -> u64 {
 }
 
 pub(super) const fn years_and_days_from_seconds(seconds: u64) -> (u64, u16) {
-
     let days = seconds / SECONDS_IN_DAY;
 
     let calendar_cycles = days / DAYS_IN_CALENDAR_CYCLE;
@@ -54,11 +52,11 @@ pub(super) const fn years_and_days_from_seconds(seconds: u64) -> (u64, u16) {
 
     let years = (remaining_days / DAYS_IN_REGULAR_YEAR) - (remaining_days / (DAYS_IN_REGULAR_YEAR * 4));
     remaining_days -= years * DAYS_IN_REGULAR_YEAR;
-    assert!(remaining_days <= DAYS_IN_LEAP_YEAR - 1);
+    debug_assert!(remaining_days <= DAYS_IN_LEAP_YEAR - 1);
 
     let total_years = calendar_cycles * 400 + centuries * 100 + four_year_periods * 4 + years;
 
-    (total_years, remaining_days as u16) // Safe cast because of the assertion
+    (total_years, remaining_days as u16)
 }
 
 pub(super) const fn is_leap_year(years: u64) -> bool {

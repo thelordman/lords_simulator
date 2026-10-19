@@ -2,6 +2,8 @@ mod year;
 mod month;
 mod day;
 
+mod duration;
+
 /// Number of ticks per in-game second.
 pub const TICKS_PER_SECOND: u64 = 1;
 

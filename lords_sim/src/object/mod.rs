@@ -1,15 +1,23 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use crate::Time;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Object {
     location: Location,
+    creation: Time
 }
 
-/// Represents a location on a 2-dimensional plane, counted in millimeters.
+impl Object {
+    pub fn new(location: Location, creation: Time) -> Self {
+        Self { location, creation }
+    }
+}
+
+/// Represents a location on a 2-dimensional plane, with millimeter accuracy.
 ///
 /// A location is represented by the x and y coordinates relative to the center of the plane.
-/// The coordinates are stored as integers, which means floating point errors are not a consideration.
+/// The coordinates are stored as integers, and floating point errors are not a consideration.
 /// This location implementation should only be used for simplistic representations of 2-dimensional flat worlds
 /// and never in more complex, planetary contexts.
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
@@ -32,8 +40,8 @@ pub struct Animal {
 }
 
 impl Animal {
-    pub fn new(name: Name, sex: Sex) -> Self {
-        Self { object: Default::default(), name, sex }
+    pub fn new(location: Location, time: Time, name: Name, sex: Sex) -> Self {
+        Self { object: Object::new(location, time), name, sex }
     }
 }
 
@@ -92,8 +100,8 @@ pub struct Human {
 }
 
 impl Human {
-    pub fn new(name: Name, sex: Sex) -> Self {
-        Self { animal: Animal::new(name, sex) }
+    pub fn new(location: Location, time: Time, name: Name, sex: Sex) -> Self {
+        Self { animal: Animal::new(location, time, name, sex) }
     }
 }
 
