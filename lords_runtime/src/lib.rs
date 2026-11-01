@@ -3,6 +3,7 @@
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use crossbeam_channel::{bounded, unbounded};
+use log::warn;
 use lords_sim::Simulation;
 
 /// Number of real-time seconds per tick.
@@ -35,18 +36,23 @@ impl Runtime {
                     }
                 }
 
-                if !paused {
-                    sim.tick();
-                    *state_clone.write().expect("Runtime state RwLock poisoned") = sim.state.clone();
-                    let _ = tick_tx.send(());
+                if paused {
+                    continue;
                 }
+
+                sim.tick();
+                *state_clone.write().expect("Runtime state RwLock poisoned") = sim.state.clone();
+                let _ = tick_tx.send(());
 
                 let now = Instant::now();
                 if next_tick > now {
                     std::thread::sleep(next_tick - now);
+                } else if next_tick < now {
+                    let tick_overtime_ms = (now - next_tick).as_millis();
+                    warn!("Tick was {tick_overtime_ms} ms late")
                 }
 
-                next_tick += tick_interval;
+                next_tick = Instant::now() + tick_interval;
             }
         });
 

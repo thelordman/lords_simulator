@@ -110,7 +110,7 @@ impl From<lords_sim::Time> for Time {
 
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "T{:02}:{:02}:{:02}Z", self.hour, self.minute, self.second)
+        write!(f, "{:02}:{:02}:{:02}", self.hour, self.minute, self.second)
     }
 }
 
