@@ -5,6 +5,7 @@ use crate::scenes;
 pub struct App {
     ctx: egui::Context,
 
+    // TODO: Figure out how to get rid of the Option
     pub runtime: Option<Runtime>,
 
     pub scene: scenes::Scene,

@@ -26,6 +26,7 @@ impl Runtime {
         std::thread::spawn(move || {
             let mut paused = false;
             loop {
+                // TODO: Potential to block the tick-loop; move to a separate thread
                 while let Ok(cmd) = cmd_rx.try_recv() {
                     match cmd {
                         Command::Pause  => paused = true,
@@ -37,6 +38,7 @@ impl Runtime {
                 }
 
                 if paused {
+                    next_tick = Instant::now() + tick_interval;
                     continue;
                 }
 
