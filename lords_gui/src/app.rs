@@ -1,17 +1,10 @@
 use lords_runtime::Runtime;
-use lords_sim::{Name, Sex, State};
-use crate::scenes;
+
+use crate::scenes::{MainMenu, Overview, Scene, SceneResponse};
 
 pub struct App {
     ctx: egui::Context,
-
-    // TODO: Figure out how to get rid of the Option
-    pub runtime: Option<Runtime>,
-
-    pub scene: scenes::Scene,
-
-    pub main_menu_data: scenes::main_menu::MainMenuData,
-    pub character_creation_data: scenes::character_creation::CharacterCreationData,
+    scene: Box<dyn Scene>,
 }
 
 impl App {
@@ -21,29 +14,11 @@ impl App {
 
         Self {
             ctx: cc.egui_ctx.clone(),
-
-            runtime: None,
-
-            scene: scenes::Scene::MainMenu,
-
-            main_menu_data: scenes::main_menu::MainMenuData { show_fullscreen_prompt: true },
-            character_creation_data: scenes::character_creation::CharacterCreationData {
-                first_name: String::new(),
-                last_name: String::new(),
-                middle_names: Vec::new(),
-                sex: None,
-            },
+            scene: Box::new(MainMenu::default()),
         }
     }
 
-    // TODO: This will be cleaned up once the state gets more complex
-    pub fn state(&self) -> State {
-        self.runtime.as_ref().unwrap().state.read().unwrap().clone()
-    }
-
-    pub fn start_runtime(&mut self, name: Name, sex: Sex) {
-        self.scene = scenes::Scene::Overview;
-
+    fn start_sim(&mut self, name: lords_sim::Name, sex: lords_sim::Sex) {
         let (runtime, tick_rx) = Runtime::new(lords_sim::Simulation::new(name, sex));
 
         let ctx = self.ctx.clone();
@@ -53,13 +28,16 @@ impl App {
             }
         });
 
-        self.runtime = Some(runtime);
+        self.scene = Box::new(Overview::new(runtime));
     }
 }
 
 impl eframe::App for App {
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        scenes::draw_scene(self, ctx);
+        match self.scene.update(ctx) {
+            SceneResponse::None => {}
+            SceneResponse::Transition(next) => self.scene = next,
+            SceneResponse::StartSim { name, sex } => self.start_sim(name, sex),
+        }
     }
 }

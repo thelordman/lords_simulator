@@ -1,8 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-pub use app::App;
-
+mod datetime;
 mod scenes;
 
-mod datetime;
+pub use app::App;

@@ -1,28 +1,31 @@
-use crate::App;
+mod character_creation;
+mod main_menu;
+mod overview;
 
-pub mod main_menu;
-pub mod character_creation;
-pub mod overview;
+pub use character_creation::CharacterCreation;
+pub use main_menu::MainMenu;
+pub use overview::Overview;
 
-pub enum Scene {
-    MainMenu,
-    CharacterCreation,
-    Overview,
+use lords_sim::{Name, Sex};
+
+pub trait Scene {
+    /// Draw the scene UI and return any requested action.
+    fn update(&mut self, ctx: &egui::Context) -> SceneResponse;
 }
 
-pub fn draw_scene(app: &mut App, ctx: &egui::Context) {
-    match app.scene {
-        Scene::MainMenu => main_menu::ui(app, ctx),
-        Scene::CharacterCreation => character_creation::ui(app, ctx),
-        Scene::Overview => overview::ui(app, ctx),
-    }
+/// Response from a scene update, indicating what action to take.
+pub enum SceneResponse {
+    None,
+    Transition(Box<dyn Scene>),
+    StartSim { name: Name, sex: Sex },
 }
 
-fn top_panel(ctx: &egui::Context) {
+/// Renders the standard top panel with menu bar.
+pub fn top_panel(ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
-            let is_web = cfg!(target_arch = "wasm32");
-            if !is_web {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
                 ui.menu_button("File", |ui| {
                     if ui.button("Quit").clicked() {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
