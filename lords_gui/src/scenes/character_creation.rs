@@ -11,17 +11,17 @@ pub struct CharacterCreation {
 }
 
 impl Scene for CharacterCreation {
-    fn update(&mut self, ctx: &egui::Context) -> SceneResponse {
-        top_panel(ctx);
+    fn update(&mut self, ui: &mut egui::Ui) -> SceneResponse {
+        top_panel(ui);
 
-        self.sex_panel(ctx);
-        self.central_panel(ctx)
+        self.sex_panel(ui);
+        self.central_panel(ui)
     }
 }
 
 impl CharacterCreation {
-    fn sex_panel(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("sex_panel").show(ctx, |ui| {
+    fn sex_panel(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::left("sex_panel").show(ui, |ui| {
             ui.label(egui::RichText::new("Sex").size(25.0).strong());
 
             ui.horizontal(|ui| {
@@ -41,10 +41,10 @@ impl CharacterCreation {
         });
     }
 
-    fn central_panel(&mut self, ctx: &egui::Context) -> SceneResponse {
+    fn central_panel(&mut self, ui: &mut egui::Ui) -> SceneResponse {
         let mut response = SceneResponse::None;
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(25.0);
                 ui.label(
@@ -80,6 +80,7 @@ impl CharacterCreation {
     }
 
     fn name_fields(&mut self, ui: &mut egui::Ui) {
+        // TODO: Replace hard-coded layout with column layout (macro)
         const TEXT_BOX_WIDTH: f32 = 150.0;
         const TEXT_BOX_HEIGHT: f32 = 20.0;
         const ADD_BUTTON_WIDTH: f32 = 20.0;

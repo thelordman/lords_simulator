@@ -6,27 +6,31 @@ use crate::datetime::DateTime;
 
 use super::{top_panel, Scene, SceneResponse};
 
+const TIME_CONTROL_COMBO_BOX_ID: &str = "time_control_combo_box";
+
 pub struct Overview {
     runtime: Runtime,
 }
 
 impl Overview {
     pub fn new(runtime: Runtime) -> Self {
+        let _ = egui::ComboBox::new(TIME_CONTROL_COMBO_BOX_ID, "");
+
         Self { runtime }
     }
 }
 
 impl Scene for Overview {
-    fn update(&mut self, ctx: &egui::Context) -> SceneResponse {
+    fn update(&mut self, ui: &mut egui::Ui) -> SceneResponse {
         let state = self.runtime.state.read().expect("state lock poisoned");
 
-        top_panel(ctx);
+        top_panel(ui);
 
         let name = state.player.name().full();
         let sex = state.player.sex();
         let age = state.time.years();
 
-        egui::SidePanel::left("left_panel").show(ctx, |ui| {
+        egui::Panel::left("left_panel").show(ui, |ui| {
             ui.label(format!("Name: {name}"));
             ui.label(format!("Sex: {sex}"));
             ui.label(format!("Age: {age}"));
@@ -35,7 +39,7 @@ impl Scene for Overview {
         let year = state.time.year();
         let datetime = DateTime::from(state.time).format_default();
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new(format!("Year {year}")).size(50.0).strong());
                 ui.add_space(25.0);

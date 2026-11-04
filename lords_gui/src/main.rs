@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 

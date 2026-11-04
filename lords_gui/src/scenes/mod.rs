@@ -10,7 +10,7 @@ use lords_sim::{Name, Sex};
 
 pub trait Scene {
     /// Draw the scene UI and return any requested action.
-    fn update(&mut self, ctx: &egui::Context) -> SceneResponse;
+    fn update(&mut self, ui: &mut egui::Ui) -> SceneResponse;
 }
 
 /// Response from a scene update, indicating what action to take.
@@ -21,14 +21,14 @@ pub enum SceneResponse {
 }
 
 /// Renders the standard top panel with menu bar.
-pub fn top_panel(ctx: &egui::Context) {
-    egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+pub fn top_panel(ui: &mut egui::Ui) {
+    egui::Panel::top("top_panel").show(ui, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             #[cfg(not(target_arch = "wasm32"))]
             {
                 ui.menu_button("File", |ui| {
                     if ui.button("Quit").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ui.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
                 ui.add_space(16.0);

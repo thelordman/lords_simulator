@@ -1,3 +1,5 @@
+use eframe::Frame;
+use egui::Ui;
 use lords_runtime::Runtime;
 
 use crate::scenes::{MainMenu, Overview, Scene, SceneResponse};
@@ -33,8 +35,8 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        match self.scene.update(ctx) {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        match self.scene.update(ui) {
             SceneResponse::None => {}
             SceneResponse::Transition(next) => self.scene = next,
             SceneResponse::StartSim { name, sex } => self.start_sim(name, sex),
