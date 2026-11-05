@@ -1,5 +1,5 @@
 use lords_sim::{Name, Sex};
-
+use crate::icons;
 use super::{top_panel, Scene, SceneResponse};
 
 #[derive(Default)]
@@ -106,11 +106,13 @@ impl CharacterCreation {
             }
 
             if ui
-                .add_sized([ADD_BUTTON_WIDTH, TEXT_BOX_HEIGHT], egui::Button::new("+"))
+                .add_sized([ADD_BUTTON_WIDTH, TEXT_BOX_HEIGHT], egui::Button::new(egui::RichText::new(icons::PLUS)))
                 .on_hover_text("Add Middle Name")
                 .clicked()
             {
-                self.middle_names.push(String::new());
+                if (available_width - total_width + TEXT_BOX_WIDTH) >= 0f32 {
+                    self.middle_names.push(String::new());
+                }
             }
 
             Self::name_field(ui, TEXT_BOX_WIDTH, &mut self.last_name, "Last Name");
