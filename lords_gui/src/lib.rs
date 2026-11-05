@@ -3,6 +3,7 @@
 
 mod app;
 mod datetime;
+mod icons;
 mod scenes;
 
 pub use app::App;

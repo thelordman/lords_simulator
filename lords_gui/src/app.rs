@@ -2,6 +2,7 @@ use eframe::Frame;
 use egui::Ui;
 use lords_runtime::Runtime;
 
+use crate::icons;
 use crate::scenes::{MainMenu, Overview, Scene, SceneResponse};
 
 pub struct App {
@@ -13,6 +14,7 @@ impl App {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_zoom_factor(2.0);
+        icons::install(&cc.egui_ctx);
 
         Self {
             ctx: cc.egui_ctx.clone(),

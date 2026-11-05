@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use std::thread::Thread;
 use std::time::Instant;
 use crossbeam_channel::{bounded, unbounded};
 use log::warn;
@@ -11,41 +13,39 @@ use lords_sim::Simulation;
 pub const TICK_INTERVAL: u64 = 1;
 
 pub struct Runtime {
-    pub state: Arc<RwLock<lords_sim::State>>,
+    state: Arc<RwLock<Arc<lords_sim::State>>>,
     cmd_tx: crossbeam_channel::Sender<Command>,
+    paused: Arc<AtomicBool>,
+    tick_thread: Thread,
 }
 
 impl Runtime {
     pub fn new(mut sim: Simulation) -> (Self, TickReceiver) {
-        let state = Arc::new(RwLock::new(sim.state.clone()));
+        let state = Arc::new(RwLock::new(Arc::new(sim.state.clone())));
         let state_clone = Arc::clone(&state);
         let (cmd_tx, cmd_rx) = unbounded();
-        let (tick_tx, tick_rx) = bounded(0);
+        let (tick_tx, tick_rx) = bounded(1);
         let tick_interval = std::time::Duration::from_secs(TICK_INTERVAL);
         let mut next_tick = Instant::now() + tick_interval;
+        let paused = Arc::new(AtomicBool::new(false));
+        let paused_clone = Arc::clone(&paused);
 
-        std::thread::spawn(move || {
-            let mut paused = false;
+        let tick_thread = std::thread::spawn(move || {
             loop {
-                // TODO: Potential to block the tick-loop; move to a separate thread
+                while paused_clone.load(Ordering::Acquire) {
+                    std::thread::park();
+                    next_tick = Instant::now() + tick_interval;
+                }
+
                 while let Ok(cmd) = cmd_rx.try_recv() {
                     match cmd {
-                        Command::Pause  => paused = true,
-                        Command::Resume => paused = false,
-                        Command::Reset  => {
-                            sim.state.time.zero(); paused = false;
-                        }
+                        Command::Reset => sim.state.time.zero(),
                     }
                 }
 
-                if paused {
-                    next_tick = Instant::now() + tick_interval;
-                    continue;
-                }
-
                 sim.tick();
-                *state_clone.write().expect("Runtime state RwLock poisoned") = sim.state.clone();
-                let _ = tick_tx.send(());
+                *state_clone.write().expect("Runtime state RwLock poisoned") = Arc::new(sim.state.clone());
+                let _ = tick_tx.try_send(());
 
                 let now = Instant::now();
                 if next_tick > now {
@@ -57,19 +57,29 @@ impl Runtime {
 
                 next_tick = Instant::now() + tick_interval;
             }
-        });
+        }).thread().clone();
 
-        (Self { state, cmd_tx }, TickReceiver { 0: tick_rx })
+        (Self { state, cmd_tx, paused, tick_thread }, TickReceiver { 0: tick_rx })
+    }
+
+    /// Returns a snapshot of the state as of the latest tick.
+    pub fn state(&self) -> Arc<lords_sim::State> {
+        Arc::clone(&self.state.read().expect("Runtime state RwLock poisoned"))
     }
 
     pub fn pause(&self)  {
-        let _ = self.cmd_tx.send(Command::Pause);
+        self.paused.store(true, Ordering::Release);
     }
     pub fn resume(&self) {
-        let _ = self.cmd_tx.send(Command::Resume);
+        self.paused.store(false, Ordering::Release);
+        self.tick_thread.unpark();
     }
     pub fn reset(&self)  {
         let _ = self.cmd_tx.send(Command::Reset);
+        self.resume();
+    }
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::Acquire)
     }
 }
 
@@ -83,7 +93,5 @@ impl TickReceiver {
 }
 
 pub enum Command {
-    Pause,
-    Resume,
     Reset,
 }

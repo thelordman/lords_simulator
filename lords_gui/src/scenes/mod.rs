@@ -33,7 +33,6 @@ pub fn top_panel(ui: &mut egui::Ui) {
                 });
                 ui.add_space(16.0);
             }
-            egui::widgets::global_theme_preference_buttons(ui);
         });
     });
 }
