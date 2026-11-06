@@ -110,7 +110,7 @@ impl CharacterCreation {
                 .on_hover_text("Add Middle Name")
                 .clicked()
             {
-                if (available_width - total_width + TEXT_BOX_WIDTH) >= 0f32 {
+                if (available_width - total_width + 2 * TEXT_BOX_WIDTH) >= 0f32 {
                     self.middle_names.push(String::new());
                 }
             }
