@@ -1,16 +1,21 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use crate::Time;
+use crate::Timestamp;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Object {
     location: Location,
-    creation: Time
+    creation: Timestamp
 }
 
 impl Object {
-    pub fn new(location: Location, creation: Time) -> Self {
+    pub fn new(location: Location, creation: Timestamp) -> Self {
         Self { location, creation }
+    }
+
+    /// Returns the moment this object came into existence.
+    pub fn creation(&self) -> Timestamp {
+        self.creation
     }
 }
 
@@ -40,7 +45,7 @@ pub struct Animal {
 }
 
 impl Animal {
-    pub fn new(location: Location, time: Time, name: Name, sex: Sex) -> Self {
+    pub fn new(location: Location, time: Timestamp, name: Name, sex: Sex) -> Self {
         Self { object: Object::new(location, time), name, sex }
     }
 }
@@ -100,7 +105,7 @@ pub struct Human {
 }
 
 impl Human {
-    pub fn new(location: Location, time: Time, name: Name, sex: Sex) -> Self {
+    pub fn new(location: Location, time: Timestamp, name: Name, sex: Sex) -> Self {
         Self { animal: Animal::new(location, time, name, sex) }
     }
 }
@@ -109,6 +114,7 @@ pub trait Living {
     fn animal(&self) -> &Animal;
     fn name(&self) -> &Name { &self.animal().name }
     fn sex(&self) -> Sex { self.animal().sex }
+    fn birth(&self) -> Timestamp { self.animal().object.creation() }
 }
 
 impl Living for Human {

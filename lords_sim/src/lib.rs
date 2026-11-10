@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 
-mod time;
+pub mod time;
 pub mod object;
 
-pub use time::Time;
+pub use time::Timestamp;
 pub use crate::object::{Human, Name, Sex};
 
 pub struct Simulation {
@@ -25,11 +25,11 @@ impl Simulation {
 pub struct State {
     pub player: Human,
 
-    pub time: Time,
+    pub time: Timestamp,
 }
 
 impl State {
     pub fn new(name: Name, sex: Sex) -> Self {
-        Self { player: Human::new(Default::default(), Default::default(), name, sex), time: Time::default() }
+        Self { player: Human::new(Default::default(), Default::default(), name, sex), time: Timestamp::EPOCH }
     }
 }

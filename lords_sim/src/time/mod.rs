@@ -1,74 +1,37 @@
-mod year;
-mod month;
-mod day;
+//! Simulation time: the absolute tick counter and the calendars that interpret it.
 
-mod duration;
+pub mod gregorian;
 
 /// Number of ticks per in-game second.
 pub const TICKS_PER_SECOND: u64 = 1;
 
-/// Represents the amount of time elapsed since the start of the simulation.
+/// A point in simulation time, counted in ticks since [`Timestamp::EPOCH`].
 ///
-/// This struct is the absolute time of the simulation, counted in ticks. It is not tied to any planet or time system.
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Time {
-    tick: u64
+/// A timestamp is absolute and not tied to any planet or calendar. See [`gregorian`] for
+/// interpreting it as a date and a time of day.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Timestamp {
+    ticks: u64,
 }
 
-impl Time {
-    pub fn new() -> Self {
-        Self::default()
+impl Timestamp {
+    /// The start of the simulation.
+    pub const EPOCH: Self = Self { ticks: 0 };
+
+    /// Returns the timestamp `seconds` in-game seconds after [`Self::EPOCH`].
+    pub const fn from_seconds(seconds: u64) -> Self {
+        Self {
+            ticks: seconds * TICKS_PER_SECOND,
+        }
     }
 
-    pub fn advance(&mut self) {
-        self.tick += 1;
+    /// Returns the number of whole in-game seconds elapsed since [`Self::EPOCH`].
+    pub const fn as_seconds(self) -> u64 {
+        self.ticks / TICKS_PER_SECOND
     }
 
-    pub fn zero(&mut self) {
-        self.tick = 0;
-    }
-
-    pub const fn seconds(self) -> u64 {
-        self.tick / TICKS_PER_SECOND
-    }
-
-    pub const fn second(self) -> u8 {
-        (self.seconds() % 60) as u8
-    }
-
-    pub const fn minutes(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60)
-    }
-
-    pub const fn minute(self) -> u8 {
-        (self.minutes() % 60) as u8
-    }
-
-    pub const fn hours(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60)
-    }
-
-    pub const fn hour(self) -> u8 {
-        (self.hours() % 24) as u8
-    }
-
-    pub const fn days(self) -> u64 {
-        self.tick / (TICKS_PER_SECOND * 60 * 60 * 24)
-    }
-
-    pub const fn day(self) -> u8 {
-        day::days_from_seconds(self.tick / TICKS_PER_SECOND) + 1
-    }
-
-    pub const fn month(self) -> u8 {
-        month::months_from_seconds(self.tick / TICKS_PER_SECOND) + 1
-    }
-
-    pub const fn years(self) -> u64 {
-        year::years_from_seconds(self.tick / TICKS_PER_SECOND)
-    }
-
-    pub const fn year(self) -> u64 {
-        self.years() + 1
+    /// Moves this timestamp forward by one tick.
+    pub const fn advance(&mut self) {
+        self.ticks += 1;
     }
 }

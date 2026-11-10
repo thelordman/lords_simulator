@@ -7,7 +7,7 @@ use std::thread::Thread;
 use std::time::Instant;
 use crossbeam_channel::{bounded, unbounded};
 use log::warn;
-use lords_sim::Simulation;
+use lords_sim::{Simulation, Timestamp};
 
 /// Number of real-time seconds per tick.
 pub const TICK_INTERVAL: u64 = 1;
@@ -39,7 +39,7 @@ impl Runtime {
 
                 while let Ok(cmd) = cmd_rx.try_recv() {
                     match cmd {
-                        Command::Reset => sim.state.time.zero(),
+                        Command::Reset => sim.state.time = Timestamp::EPOCH,
                     }
                 }
 

@@ -1,17 +1,19 @@
 use std::fmt::{self, Display, Formatter, Write};
 
+use lords_sim::Timestamp;
+use lords_sim::time::gregorian::{Date, TimeOfDay};
+
 /// Combined date and time representation.
-#[derive(Default)]
 pub struct DateTime {
     date: Date,
-    time: Time,
+    time: TimeOfDay,
 }
 
-impl From<lords_sim::Time> for DateTime {
-    fn from(time: lords_sim::Time) -> Self {
+impl From<Timestamp> for DateTime {
+    fn from(timestamp: Timestamp) -> Self {
         Self {
-            date: Date::from(time),
-            time: Time::from(time),
+            date: Date::from(timestamp),
+            time: TimeOfDay::from(timestamp),
         }
     }
 }
@@ -33,13 +35,13 @@ impl DateTime {
     ) -> String {
         format!(
             "{} {}",
-            self.date.format(date_order, date_sep),
-            self.time.format(time_order, time_sep)
+            format_date(self.date, date_order, date_sep),
+            format_time(self.time, time_order, time_sep)
         )
     }
 
     /// Format using default settings:
-    /// DMY with periods, HMS with colons.
+    /// `DD.MM.YY HH:MM:SS`
     pub fn format_default(&self) -> String {
         self.format(
             DateOrder::Dmy,
@@ -50,46 +52,13 @@ impl DateTime {
     }
 }
 
-pub struct Date {
-    year: u64,
-    month: u8,
-    day: u8,
-}
+fn format_date(date: Date, order: DateOrder, sep: DateSeparator) -> String {
+    let (year, month, day) = (date.year(), date.month(), date.day());
 
-impl Default for Date {
-    fn default() -> Self {
-        Self {
-            year: 1,
-            month: 1,
-            day: 1,
-        }
-    }
-}
-
-impl From<lords_sim::Time> for Date {
-    fn from(time: lords_sim::Time) -> Self {
-        Self {
-            year: time.year(),
-            month: time.month(),
-            day: time.day(),
-        }
-    }
-}
-
-impl Display for Date {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:04}-{:02}-{:02}", self.year, self.month, self.day)
-    }
-}
-
-impl Date {
-    pub fn format(&self, order: DateOrder, sep: DateSeparator) -> String {
-        let (a, b, c) = match order {
-            DateOrder::Dmy => (self.day as u64, self.month as u64, self.year),
-            DateOrder::Mdy => (self.month as u64, self.day as u64, self.year),
-            DateOrder::Ymd => (self.year, self.month as u64, self.day as u64),
-        };
-        format!("{a}{sep}{b}{sep}{c}")
+    match order {
+        DateOrder::Dmy => format!("{day}{sep}{month}{sep}{year}"),
+        DateOrder::Mdy => format!("{month}{sep}{day}{sep}{year}"),
+        DateOrder::Ymd => format!("{year}{sep}{month}{sep}{day}"),
     }
 }
 
@@ -117,36 +86,11 @@ impl Display for DateSeparator {
     }
 }
 
-#[derive(Default)]
-pub struct Time {
-    hour: u8,
-    minute: u8,
-    second: u8,
-}
+fn format_time(time: TimeOfDay, order: TimeOrder, sep: TimeSeparator) -> String {
+    let (hour, minute, second) = (time.hour(), time.minute(), time.second());
 
-impl From<lords_sim::Time> for Time {
-    fn from(time: lords_sim::Time) -> Self {
-        Self {
-            hour: time.hour(),
-            minute: time.minute(),
-            second: time.second(),
-        }
-    }
-}
-
-impl Display for Time {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:02}:{:02}:{:02}", self.hour, self.minute, self.second)
-    }
-}
-
-impl Time {
-    pub fn format(&self, order: TimeOrder, sep: TimeSeparator) -> String {
-        match order {
-            TimeOrder::Hms => {
-                format!("{:02}{sep}{:02}{sep}{:02}", self.hour, self.minute, self.second)
-            }
-        }
+    match order {
+        TimeOrder::Hms => format!("{hour:02}{sep}{minute:02}{sep}{second:02}"),
     }
 }
 

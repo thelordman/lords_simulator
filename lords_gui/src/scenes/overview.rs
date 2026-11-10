@@ -1,7 +1,8 @@
 use egui::RichText;
 use lords_runtime::Runtime;
 use lords_sim::object::Living;
-use lords_sim::{Human, Time};
+use lords_sim::time::gregorian::Date;
+use lords_sim::{Human, Timestamp};
 
 use crate::datetime::DateTime;
 use crate::icons;
@@ -42,7 +43,7 @@ impl Scene for Overview {
 }
 
 impl Overview {
-    fn time_bar(&self, ui: &mut egui::Ui, time: Time) {
+    fn time_bar(&self, ui: &mut egui::Ui, time: Timestamp) {
         let paused = self.runtime.is_paused();
 
         egui::Panel::top("time_bar").show(ui, |ui| {
@@ -87,14 +88,15 @@ impl Overview {
     }
 }
 
-fn clock(ui: &mut egui::Ui, time: Time, paused: bool) {
+fn clock(ui: &mut egui::Ui, time: Timestamp, paused: bool) {
     let now = RichText::new(DateTime::from(time).format_default()).size(CONTROL_SIZE);
 
     ui.label(if paused { now.weak() } else { now.strong() });
 }
 
-fn character_panel(ui: &mut egui::Ui, player: &Human, time: Time) {
+fn character_panel(ui: &mut egui::Ui, player: &Human, time: Timestamp) {
     let sex = player.sex();
+    let age = Date::from(time).years_since(Date::from(player.birth()));
 
     egui::Panel::left("character_panel")
         .resizable(false)
@@ -112,7 +114,7 @@ fn character_panel(ui: &mut egui::Ui, player: &Human, time: Time) {
                 .spacing(FACT_SPACING)
                 .show(ui, |ui| {
                     fact(ui, "Sex", format!("{} {sex}", icons::sex(sex)));
-                    fact(ui, "Age", format_age(time.years()));
+                    fact(ui, "Age", format_age(age));
                 });
         });
 }
