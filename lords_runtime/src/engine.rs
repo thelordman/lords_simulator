@@ -4,29 +4,40 @@ use lords_sim::{Command, Simulation};
 
 use crate::clock::Clock;
 use crate::snapshot::Snapshot;
+use crate::speed::Speed;
 
 /// A request from the [`Runtime`](crate::Runtime) handle to the simulation thread.
 #[derive(Debug)]
 pub(crate) enum Request {
     Pause,
     Resume,
+    SetSpeed(Speed),
     Command(Command),
 }
 
 pub(crate) struct Engine {
     sim: Simulation,
     clock: Clock,
+    speed: Speed,
 }
 
 impl Engine {
-    pub(crate) fn new(sim: Simulation, clock: Clock) -> Self {
-        Self { sim, clock }
+    pub(crate) fn new(sim: Simulation, speed: Speed, now: Instant) -> Self {
+        Self {
+            sim,
+            clock: Clock::starting_at(now, speed.tick_interval()),
+            speed,
+        }
     }
 
     pub(crate) fn handle(&mut self, request: Request, now: Instant) {
         match request {
             Request::Pause => self.clock.pause(),
             Request::Resume => self.clock.resume(now),
+            Request::SetSpeed(speed) => {
+                self.speed = speed;
+                self.clock.set_interval(speed.tick_interval(), now);
+            }
             Request::Command(command) => self.sim.apply(command),
         }
     }
@@ -53,6 +64,7 @@ impl Engine {
         Snapshot {
             state: self.sim.state().clone(),
             paused: self.clock.is_paused(),
+            speed: self.speed,
         }
     }
 }
@@ -62,13 +74,15 @@ mod tests {
     use lords_sim::{Name, Sex, Timestamp};
 
     use super::*;
+    use crate::speed::BASE_INTERVAL;
 
-    const INTERVAL: Duration = Duration::from_millis(100);
+    const INTERVAL: Duration = BASE_INTERVAL;
 
     fn engine(start: Instant) -> Engine {
         Engine::new(
             Simulation::new(Name::default(), Sex::Female),
-            Clock::starting_at(start, INTERVAL),
+            Speed::BASE,
+            start,
         )
     }
 
@@ -130,5 +144,20 @@ mod tests {
         engine.handle(Request::Resume, start + INTERVAL / 2);
 
         assert_eq!(engine.deadline(), Some(start + INTERVAL));
+    }
+
+    #[test]
+    fn speed_change_is_published_and_shortens_ticks() {
+        let start = Instant::now();
+        let mut engine = engine(start);
+        let fast = Speed::new(10);
+        let interval = fast.tick_interval();
+
+        engine.handle(Request::SetSpeed(fast), start);
+
+        assert_eq!(engine.snapshot().speed, fast);
+        assert!(engine.advance(start + interval));
+        assert!(engine.advance(start + interval * 2));
+        assert_eq!(engine.snapshot().state.time, after_ticks(2));
     }
 }

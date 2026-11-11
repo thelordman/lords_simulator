@@ -1,5 +1,5 @@
 use egui::RichText;
-use lords_runtime::Runtime;
+use lords_runtime::{Runtime, Speed};
 use lords_sim::object::Living;
 use lords_sim::time::gregorian::Date;
 use lords_sim::{Human, Timestamp};
@@ -35,7 +35,7 @@ impl Scene for Overview {
         let state = &snapshot.state;
 
         top_panel(ui);
-        self.time_bar(ui, state.time, snapshot.paused);
+        self.time_bar(ui, state.time, snapshot.paused, snapshot.speed);
         character_panel(ui, &state.player, state.time);
         content_area(ui);
 
@@ -44,12 +44,13 @@ impl Scene for Overview {
 }
 
 impl Overview {
-    fn time_bar(&self, ui: &mut egui::Ui, time: Timestamp, paused: bool) {
+    fn time_bar(&self, ui: &mut egui::Ui, time: Timestamp, paused: bool, speed: Speed) {
         egui::Panel::top("time_bar").show(ui, |ui| {
             egui::Aligned::new(egui::Align2::CENTER_TOP).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     self.pause_button(ui, paused);
                     clock(ui, time, paused);
+                    self.speed_slider(ui, speed);
                 });
             });
         });
@@ -82,6 +83,22 @@ impl Overview {
             self.runtime.pause();
         } else {
             self.runtime.resume();
+        }
+    }
+
+    fn speed_slider(&self, ui: &mut egui::Ui, speed: Speed) {
+        let mut multiplier = speed.multiplier();
+        let slider = egui::Slider::new(
+            &mut multiplier,
+            Speed::BASE.multiplier()..=Speed::MAX.multiplier(),
+        )
+        .logarithmic(true)
+        .suffix("×");
+
+        let changed = ui.add(slider).on_hover_text("Simulation speed").changed();
+
+        if changed {
+            self.runtime.set_speed(Speed::new(multiplier));
         }
     }
 }

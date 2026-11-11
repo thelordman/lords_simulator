@@ -2,11 +2,14 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use lords_sim::State;
 
+use crate::speed::Speed;
+
 /// The simulation as it was when the simulation thread last published it.
 #[derive(Debug)]
 pub struct Snapshot {
     pub state: State,
     pub paused: bool,
+    pub speed: Speed,
 }
 
 /// The latest [`Snapshot`], written by the simulation thread and read by its handle.

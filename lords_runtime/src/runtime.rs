@@ -6,9 +6,9 @@ use std::time::{Duration, Instant};
 use log::{error, warn};
 use lords_sim::{Command, Simulation};
 
-use crate::clock::{Clock, BASE_INTERVAL};
 use crate::engine::{Engine, Request};
 use crate::snapshot::{Published, Snapshot};
+use crate::speed::Speed;
 
 /// How long before a tick is due the simulation thread stops listening for requests and
 /// sleeps instead.
@@ -21,10 +21,9 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// Moves `sim` to a new thread and starts ticking it.
+    /// Moves `sim` to a new thread and starts ticking it at [`Speed::BASE`].
     pub fn spawn(sim: Simulation, on_publish: impl Fn() + Send + 'static) -> Self {
-        let clock = Clock::starting_at(Instant::now(), BASE_INTERVAL);
-        let engine = Engine::new(sim, clock);
+        let engine = Engine::new(sim, Speed::BASE, Instant::now());
         let published = Arc::new(Published::new(engine.snapshot()));
         let (requests, received) = mpsc::channel();
 
@@ -51,6 +50,10 @@ impl Runtime {
 
     pub fn resume(&self) {
         self.request(Request::Resume);
+    }
+
+    pub fn set_speed(&self, speed: Speed) {
+        self.request(Request::SetSpeed(speed));
     }
 
     /// Asks the simulation to apply `command`, which it does before its next tick, or at
@@ -93,8 +96,6 @@ fn run(
 }
 
 /// Blocks until a request arrives or `deadline` is reached, returning `None` for the latter.
-///
-/// Fails once the [`Runtime`] has been dropped.
 fn wait(
     requests: &Receiver<Request>,
     deadline: Option<Instant>,
@@ -146,6 +147,20 @@ mod tests {
             published
                 .recv_timeout(TIMEOUT)
                 .expect("the pause was never published");
+        }
+    }
+
+    #[test]
+    fn speed_change_is_published() {
+        let (runtime, published) = spawn();
+        assert_eq!(runtime.snapshot().speed, Speed::BASE);
+
+        runtime.set_speed(Speed::MAX);
+
+        while runtime.snapshot().speed != Speed::MAX {
+            published
+                .recv_timeout(TIMEOUT)
+                .expect("the speed change was never published");
         }
     }
 

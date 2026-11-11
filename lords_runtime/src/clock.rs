@@ -1,11 +1,5 @@
 use std::time::{Duration, Instant};
 
-use lords_sim::time::TICKS_PER_SECOND;
-
-/// The tick interval at which simulation time passes as fast as real time.
-pub(crate) const BASE_INTERVAL: Duration =
-    Duration::from_nanos(1_000_000_000 / TICKS_PER_SECOND);
-
 /// Decides when the next tick is due.
 #[derive(Debug)]
 pub(crate) struct Clock {
@@ -25,6 +19,14 @@ impl Clock {
 
     pub(crate) fn interval(&self) -> Duration {
         self.interval
+    }
+
+    /// Changes the interval between ticks.
+    pub(crate) fn set_interval(&mut self, interval: Duration, now: Instant) {
+        self.interval = interval;
+        if let Some(due) = &mut self.next_tick {
+            *due = (*due).min(now + interval);
+        }
     }
 
     pub(crate) fn is_paused(&self) -> bool {
@@ -131,5 +133,40 @@ mod tests {
         clock.resume(start + INTERVAL / 2);
 
         assert_eq!(clock.deadline(), Some(start + INTERVAL));
+    }
+
+    #[test]
+    fn shorter_interval_pulls_deadline_in() {
+        let start = Instant::now();
+        let mut clock = Clock::starting_at(start, INTERVAL);
+
+        clock.set_interval(INTERVAL / 4, start + MOMENT);
+
+        assert_eq!(clock.deadline(), Some(start + MOMENT + INTERVAL / 4));
+    }
+
+    #[test]
+    fn longer_interval_applies_after_scheduled_tick() {
+        let start = Instant::now();
+        let mut clock = Clock::starting_at(start, INTERVAL);
+
+        clock.set_interval(INTERVAL * 4, start + MOMENT);
+
+        assert_eq!(clock.deadline(), Some(start + INTERVAL));
+        assert!(clock.take_due_tick(start + INTERVAL));
+        assert_eq!(clock.deadline(), Some(start + INTERVAL * 5));
+    }
+
+    #[test]
+    fn interval_set_while_paused_applies_on_resume() {
+        let start = Instant::now();
+        let mut clock = Clock::starting_at(start, INTERVAL);
+
+        clock.pause();
+        clock.set_interval(INTERVAL / 4, start);
+        assert!(clock.is_paused());
+
+        clock.resume(start);
+        assert_eq!(clock.deadline(), Some(start + INTERVAL / 4));
     }
 }
