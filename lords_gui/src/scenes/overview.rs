@@ -31,10 +31,11 @@ impl Overview {
 
 impl Scene for Overview {
     fn update(&mut self, ui: &mut egui::Ui) -> SceneResponse {
-        let state = self.runtime.state();
+        let snapshot = self.runtime.snapshot();
+        let state = &snapshot.state;
 
         top_panel(ui);
-        self.time_bar(ui, state.time);
+        self.time_bar(ui, state.time, snapshot.paused);
         character_panel(ui, &state.player, state.time);
         content_area(ui);
 
@@ -43,9 +44,7 @@ impl Scene for Overview {
 }
 
 impl Overview {
-    fn time_bar(&self, ui: &mut egui::Ui, time: Timestamp) {
-        let paused = self.runtime.is_paused();
-
+    fn time_bar(&self, ui: &mut egui::Ui, time: Timestamp, paused: bool) {
         egui::Panel::top("time_bar").show(ui, |ui| {
             egui::Aligned::new(egui::Align2::CENTER_TOP).show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -75,7 +74,6 @@ impl Overview {
 
         if clicked || shortcut_pressed {
             self.set_paused(!paused);
-            ui.ctx().request_repaint();
         }
     }
 

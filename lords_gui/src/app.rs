@@ -23,13 +23,9 @@ impl App {
     }
 
     fn start_sim(&mut self, name: lords_sim::Name, sex: lords_sim::Sex) {
-        let (runtime, tick_rx) = Runtime::new(lords_sim::Simulation::new(name, sex));
-
         let ctx = self.ctx.clone();
-        std::thread::spawn(move || {
-            while tick_rx.recv_is_ok() {
-                ctx.request_repaint();
-            }
+        let runtime = Runtime::spawn(lords_sim::Simulation::new(name, sex), move || {
+            ctx.request_repaint();
         });
 
         self.scene = Box::new(Overview::new(runtime));
