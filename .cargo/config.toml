@@ -1,0 +1,3 @@
+[alias]
+check-linux = "clippy --workspace --all-targets --target x86_64-unknown-linux-gnu"
+check-mac = "clippy --workspace --all-targets --target aarch64-apple-darwin"

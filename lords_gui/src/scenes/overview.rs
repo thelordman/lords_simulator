@@ -7,7 +7,7 @@ use lords_sim::{Human, Timestamp};
 use crate::datetime::DateTime;
 use crate::icons;
 
-use super::{top_panel, Scene, SceneResponse};
+use super::{Scene, SceneResponse, top_panel};
 
 const TOGGLE_PAUSE: egui::KeyboardShortcut =
     egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Space);

@@ -1,4 +1,4 @@
-use super::{top_panel, CharacterCreation, Scene, SceneResponse};
+use super::{CharacterCreation, Scene, SceneResponse, top_panel};
 
 pub struct MainMenu {
     show_fullscreen_prompt: bool,

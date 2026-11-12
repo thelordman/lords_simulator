@@ -1,11 +1,11 @@
+use crate::Timestamp;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use crate::Timestamp;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Object {
     location: Location,
-    creation: Timestamp
+    creation: Timestamp,
 }
 
 impl Object {
@@ -46,7 +46,11 @@ pub struct Animal {
 
 impl Animal {
     pub fn new(location: Location, time: Timestamp, name: Name, sex: Sex) -> Self {
-        Self { object: Object::new(location, time), name, sex }
+        Self {
+            object: Object::new(location, time),
+            name,
+            sex,
+        }
     }
 }
 
@@ -59,12 +63,22 @@ pub struct Name {
 
 impl Name {
     pub fn new(first: String, middle: Vec<String>, last: String) -> Self {
-        Self { first, middle, last }
+        Self {
+            first,
+            middle,
+            last,
+        }
     }
 
-    pub fn first(&self) -> &str { &self.first }
-    pub fn middle(&self) -> &[String] { &self.middle }
-    pub fn last(&self) -> &str { &self.last }
+    pub fn first(&self) -> &str {
+        &self.first
+    }
+    pub fn middle(&self) -> &[String] {
+        &self.middle
+    }
+    pub fn last(&self) -> &str {
+        &self.last
+    }
 
     pub fn full(&self) -> String {
         self.to_string()
@@ -106,17 +120,27 @@ pub struct Human {
 
 impl Human {
     pub fn new(location: Location, time: Timestamp, name: Name, sex: Sex) -> Self {
-        Self { animal: Animal::new(location, time, name, sex) }
+        Self {
+            animal: Animal::new(location, time, name, sex),
+        }
     }
 }
 
 pub trait Living {
     fn animal(&self) -> &Animal;
-    fn name(&self) -> &Name { &self.animal().name }
-    fn sex(&self) -> Sex { self.animal().sex }
-    fn birth(&self) -> Timestamp { self.animal().object.creation() }
+    fn name(&self) -> &Name {
+        &self.animal().name
+    }
+    fn sex(&self) -> Sex {
+        self.animal().sex
+    }
+    fn birth(&self) -> Timestamp {
+        self.animal().object.creation()
+    }
 }
 
 impl Living for Human {
-    fn animal(&self) -> &Animal { &self.animal }
+    fn animal(&self) -> &Animal {
+        &self.animal
+    }
 }

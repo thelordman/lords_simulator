@@ -3,7 +3,7 @@ use lords_sim::{Name, Sex};
 
 use crate::icons;
 
-use super::{top_panel, Scene, SceneResponse};
+use super::{Scene, SceneResponse, top_panel};
 
 const MAX_MIDDLE_NAMES: usize = 3;
 const NAME_CHAR_LIMIT: usize = 24;

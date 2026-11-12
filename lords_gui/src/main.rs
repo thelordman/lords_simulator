@@ -2,12 +2,14 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-#[cfg(not(target_arch = "wasm32"))]
+const APP_ID: &str = "lords_simulator";
+
 fn main() -> eframe::Result {
     env_logger::init();
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_app_id(APP_ID)
             .with_maximized(true)
             .with_icon(
                 eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])

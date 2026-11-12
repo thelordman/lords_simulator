@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - run: cargo fmt --all --check
+
+  test:
+    name: Test (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+          - name: Windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets --locked -- -D clippy::all
+      - run: cargo test --workspace --locked

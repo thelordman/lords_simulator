@@ -24,15 +24,12 @@ pub enum SceneResponse {
 pub fn top_panel(ui: &mut egui::Ui) {
     egui::Panel::top("top_panel").show(ui, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        ui.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                });
-                ui.add_space(16.0);
-            }
+            ui.menu_button("File", |ui| {
+                if ui.button("Quit").clicked() {
+                    ui.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+            });
+            ui.add_space(16.0);
         });
     });
 }

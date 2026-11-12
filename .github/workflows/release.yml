@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-22.04
+            platform: linux-x86_64
+            binary: target/release/lords_simulator
+          - name: macOS
+            os: macos-latest
+            platform: macos-universal
+            binary: target/universal/lords_simulator
+          - name: Windows
+            os: windows-latest
+            platform: windows-x86_64
+            binary: target/release/lords_simulator.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Read version
+        run: |
+          version=$(cargo pkgid -p lords_gui | sed 's/.*[#@]//')
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match lords_gui version $version"
+            exit 1
+          fi
+
+      - name: Build
+        if: runner.os != 'macOS'
+        run: cargo build --release --locked --bin lords_simulator
+
+      - name: Build universal binary
+        if: runner.os == 'macOS'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release --locked --bin lords_simulator \
+            --target aarch64-apple-darwin --target x86_64-apple-darwin
+          mkdir -p target/universal
+          lipo -create -output "${{ matrix.binary }}" \
+            target/aarch64-apple-darwin/release/lords_simulator \
+            target/x86_64-apple-darwin/release/lords_simulator
+          lipo -info "${{ matrix.binary }}"
+
+      - name: Package
+        run: |
+          name="lords_simulator-$VERSION-${{ matrix.platform }}"
+          mkdir -p "dist/$name"
+          cp "${{ matrix.binary }}" LICENSE-MIT LICENSE-APACHE "dist/$name/"
+          cp assets/fonts/Phosphor-LICENSE.txt "dist/$name/LICENSE-Phosphor.txt"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            (cd dist && 7z a -tzip "$name.zip" "$name")
+          else
+            tar -czf "dist/$name.tar.gz" -C dist "$name"
+          fi
+          rm -r "dist/$name"
+
+      - name: Package app bundle
+        if: runner.os == 'macOS'
+        run: bash packaging/macos/bundle.sh "${{ matrix.binary }}" "$VERSION" dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --generate-notes
