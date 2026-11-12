@@ -27,7 +27,3 @@ cargo run --release
 ```
 
 Linux needs a C linker.
-
-The workspace is four crates: `lords_sim` is the simulation itself, `lords_runtime` runs it in
-real time on its own thread, `lords_save` reads and writes saved games, and `lords_gui` is the
-interface. `cargo test --workspace` runs the tests of all four.
