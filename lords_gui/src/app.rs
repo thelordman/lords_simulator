@@ -1,7 +1,7 @@
 use eframe::Frame;
 use egui::Ui;
 use lords_runtime::{Runtime, Speed};
-use lords_save::{LoadedSave, SimulationId, SaveKind};
+use lords_save::{LoadedSave, SaveKind, SimulationId};
 use lords_sim::Simulation;
 
 use crate::saves::Saves;

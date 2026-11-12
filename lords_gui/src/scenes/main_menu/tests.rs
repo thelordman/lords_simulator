@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use lords_save::{SimulationId, SaveKind, SaveRequest};
+use lords_save::{SaveKind, SaveRequest, SimulationId};
 use lords_sim::{Name, Sex, State};
 
 use super::*;

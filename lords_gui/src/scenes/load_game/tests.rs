@@ -112,7 +112,7 @@ fn list_draws_with_saves_and_damaged_files() {
         );
         let saved = harness.saves.list().saves;
         let directory = saved[0].path.parent().expect("saves are in a directory");
-        std::fs::write(directory.join("damaged.lsave"), b"nonsense").expect("the file is written");
+        std::fs::write(directory.join("damaged.lss"), b"nonsense").expect("the file is written");
         let mut scene = LoadGame::default();
 
         for _ in 0..3 {

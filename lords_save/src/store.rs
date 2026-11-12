@@ -10,7 +10,7 @@ use lords_sim::State;
 use serde::Serialize;
 
 use crate::error::SaveError;
-use crate::format::{self, Codec, Compression, Details, SimulationId, SaveHeader, SaveKind};
+use crate::format::{self, Codec, Compression, Details, SaveHeader, SaveKind, SimulationId};
 use crate::migrate;
 
 pub const AUTOSAVES_KEPT: usize = 3;
@@ -509,7 +509,7 @@ mod tests {
 
         assert_eq!(
             file_names(&store.root().join(playthrough.to_string())),
-            ["exit.lsave"]
+            ["exit.lss"]
         );
     }
 
@@ -522,10 +522,10 @@ mod tests {
             .expect("the save is written");
         let directory = written.path.parent().expect("the save is in a directory");
 
-        fs::write(directory.join("garbage.lsave"), b"not a save").expect("the file is written");
+        fs::write(directory.join("garbage.lss"), b"not a save").expect("the file is written");
         fs::write(directory.join("notes.txt"), b"ignored").expect("the file is written");
         let full = fs::read(&written.path).expect("the save reads");
-        fs::write(directory.join("cut.lsave"), &full[..12]).expect("the file is written");
+        fs::write(directory.join("cut.lss"), &full[..12]).expect("the file is written");
 
         let list = store.list();
         assert_eq!(list.saves, [written]);
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn only_saves_in_the_store_can_be_deleted() {
         let (directory, store) = store();
-        let outside = directory.path().join("outside.lsave");
+        let outside = directory.path().join("outside.lss");
         fs::write(&outside, b"keep me").expect("the file is written");
         let written = store
             .write(&request(&SimulationId::generate(), SaveKind::Manual, "x"))
@@ -663,7 +663,7 @@ mod tests {
             .write(&request(&SimulationId::generate(), SaveKind::Manual, "x"))
             .expect("the save is written");
         let directory = written.path.parent().expect("the save is in a directory");
-        fs::write(directory.join("exit.lsave.tmp"), b"half a save").expect("the file is written");
+        fs::write(directory.join("exit.lss.tmp"), b"half a save").expect("the file is written");
 
         assert_eq!(store.list().saves.len(), 1);
         assert!(store.list().unreadable.is_empty());

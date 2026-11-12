@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use egui::RichText;
 use lords_runtime::{Runtime, Snapshot, Speed};
-use lords_save::{SimulationId, SaveKind, SaveRequest};
+use lords_save::{SaveKind, SaveRequest, SimulationId};
 use lords_sim::object::Living;
 use lords_sim::time::gregorian::Date;
 use lords_sim::{Human, Timestamp};

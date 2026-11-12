@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use egui::RichText;
-use lords_save::{SimulationId, SaveEntry, SaveKind, UnreadableSave};
+use lords_save::{SaveEntry, SaveKind, SimulationId, UnreadableSave};
 
 use crate::datetime::DateTimeFormat;
 

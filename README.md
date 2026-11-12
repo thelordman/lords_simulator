@@ -25,7 +25,7 @@ The game keeps its settings in `app.ron` and its saves under `saves/`, one folde
 - **Linux:** `~/.local/share/lords_simulator` (or under `$XDG_DATA_HOME`)
 - **macOS:** `~/Library/Application Support/lords_simulator`
 
-Saves are binary `.lsave` files. *Export* on the Load Game screen writes a readable `.ron` copy
+Saves are binary `.lss` files. *Export* on the Load Game screen writes a readable `.ron` copy
 next to a save.
 
 ## Building
