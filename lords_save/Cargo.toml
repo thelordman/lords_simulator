@@ -1,0 +1,22 @@
+[package]
+name = "lords_save"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lords_sim = { path = "../lords_sim" }
+crc32fast = "1.5"
+log.workspace = true
+lz4_flex = "0.14"
+rmp-serde = "1.3"
+ron.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

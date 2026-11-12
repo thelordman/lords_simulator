@@ -3,7 +3,7 @@ use lords_sim::{Name, Sex};
 
 use crate::icons;
 
-use super::{Scene, SceneResponse, top_panel};
+use super::{MainMenu, MenuAction, Scene, SceneResponse, Shared, top_panel};
 
 const MAX_MIDDLE_NAMES: usize = 3;
 const NAME_CHAR_LIMIT: usize = 24;
@@ -26,17 +26,22 @@ pub struct CharacterCreation {
 }
 
 impl Scene for CharacterCreation {
-    fn update(&mut self, ui: &mut egui::Ui) -> SceneResponse {
-        top_panel(ui);
+    fn update(&mut self, ui: &mut egui::Ui, shared: &mut Shared<'_>) -> SceneResponse {
+        let menu = top_panel(ui, false);
 
+        // Escape first lets go of a name field, and only then leaves the screen.
+        let mut back = !shared.dialog_open
+            && !ui.ctx().text_edit_focused()
+            && ui.input(|input| input.key_pressed(egui::Key::Escape));
         let mut start = false;
 
         egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink(false)
                 .show(ui, |ui| {
+                    back |= ui.button("Back").clicked();
+
                     ui.vertical_centered(|ui| {
-                        ui.add_space(24.0);
                         ui.label(RichText::new("Character Creation").size(40.0).strong());
                         ui.add_space(20.0);
                     });
@@ -48,6 +53,13 @@ impl Scene for CharacterCreation {
                     ui.add_space(24.0);
                 });
         });
+
+        if let Some(MenuAction::App(action)) = menu {
+            return SceneResponse::App(action);
+        }
+        if back {
+            return SceneResponse::Transition(Box::new(MainMenu::default()));
+        }
 
         match self.sex {
             Some(sex) if start && self.missing_requirement().is_none() => SceneResponse::StartSim {
@@ -210,11 +222,14 @@ impl CharacterCreation {
         ))
         .min_size(egui::vec2(ui.available_width(), 40.0));
 
-        let mut response = ui.add_enabled(missing.is_none(), button);
-        if let Some(missing) = missing {
-            response = response.on_disabled_hover_text(missing);
-        }
-        response.clicked()
+        let clicked = ui.add_enabled(missing.is_none(), button).clicked();
+
+        // Always there, so that the card keeps its height once everything is filled in.
+        ui.vertical_centered(|ui| {
+            ui.label(RichText::new(missing.unwrap_or(" ")).weak().small());
+        });
+
+        clicked
     }
 
     fn missing_requirement(&self) -> Option<&'static str> {
@@ -268,3 +283,6 @@ fn name_field(ui: &mut egui::Ui, value: &mut String, hint: String, width: f32) -
 fn enter_pressed(ui: &egui::Ui, field: &egui::Response) -> bool {
     field.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))
 }
+
+#[cfg(test)]
+mod tests;

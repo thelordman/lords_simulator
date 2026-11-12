@@ -1,6 +1,9 @@
 # Mac stuff:
 .DS_Store
 
+# IDE settings:
+.idea/
+
 # Rust compile target directories:
 target
 target_ra

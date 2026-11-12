@@ -17,6 +17,14 @@ impl Clock {
         }
     }
 
+    /// Returns a clock that has no tick due until it is resumed.
+    pub(crate) fn paused(interval: Duration) -> Self {
+        Self {
+            interval,
+            next_tick: None,
+        }
+    }
+
     pub(crate) fn interval(&self) -> Duration {
         self.interval
     }
@@ -123,6 +131,20 @@ mod tests {
         assert!(!clock.is_paused());
         assert!(!clock.take_due_tick(resumed + INTERVAL - MOMENT));
         assert!(clock.take_due_tick(resumed + INTERVAL));
+    }
+
+    #[test]
+    fn clock_created_paused_waits_for_resume() {
+        let start = Instant::now();
+        let mut clock = Clock::paused(INTERVAL);
+
+        assert!(clock.is_paused());
+        assert!(!clock.take_due_tick(start + INTERVAL * 10));
+
+        clock.resume(start);
+
+        assert!(!clock.take_due_tick(start + INTERVAL - MOMENT));
+        assert!(clock.take_due_tick(start + INTERVAL));
     }
 
     #[test]

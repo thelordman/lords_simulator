@@ -1,11 +1,18 @@
-#![forbid(unsafe_code)]
-#![warn(clippy::all, rust_2018_idioms)]
-
 pub mod object;
 pub mod time;
 
+use serde::{Deserialize, Serialize};
+
 pub use crate::object::{Human, Name, Sex};
 pub use crate::time::Timestamp;
+
+/// Version of [`State`] as it is written to disk.
+///
+/// Raise this with any change to [`State`], or to anything inside it, that would make a
+/// state saved before the change read back wrongly or not at all: removing or renaming a
+/// field, changing its type, or changing what its value means. Adding a field marked
+/// `#[serde(default)]` does not need it.
+pub const STATE_VERSION: u32 = 1;
 
 pub struct Simulation {
     state: State,
@@ -18,6 +25,10 @@ impl Simulation {
         }
     }
 
+    pub fn from_state(state: State) -> Self {
+        Self { state }
+    }
+
     pub fn state(&self) -> &State {
         &self.state
     }
@@ -28,9 +39,6 @@ impl Simulation {
     }
 
     /// Applies a change requested from outside the simulation.
-    ///
-    /// Commands are the only way for anything but [`Self::tick`] to change the state, and
-    /// are meant to be applied between ticks.
     pub fn apply(&mut self, command: Command) {
         match command {
             Command::Reset => self.state.time = Timestamp::EPOCH,
@@ -45,7 +53,7 @@ pub enum Command {
     Reset,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
     pub player: Human,
 
@@ -58,5 +66,23 @@ impl State {
             player: Human::new(Default::default(), Default::default(), name, sex),
             time: Timestamp::EPOCH,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simulation_carries_on_from_a_state() {
+        let mut original = Simulation::new(Name::default(), Sex::Male);
+        original.tick();
+        original.tick();
+
+        let mut resumed = Simulation::from_state(original.state().clone());
+        assert_eq!(resumed.state(), original.state());
+
+        resumed.tick();
+        assert_eq!(resumed.state().time, Timestamp::from_seconds(3));
     }
 }

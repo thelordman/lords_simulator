@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use lords_sim::{Command, Simulation};
@@ -22,12 +23,17 @@ pub(crate) struct Engine {
 }
 
 impl Engine {
-    pub(crate) fn new(sim: Simulation, speed: Speed, now: Instant) -> Self {
-        Self {
-            sim,
-            clock: Clock::starting_at(now, speed.tick_interval()),
-            speed,
-        }
+    /// Returns an engine for `sim` whose first tick is due one tick interval after `now`,
+    /// or once it is resumed if it starts `paused`.
+    pub(crate) fn new(sim: Simulation, speed: Speed, paused: bool, now: Instant) -> Self {
+        let interval = speed.tick_interval();
+        let clock = if paused {
+            Clock::paused(interval)
+        } else {
+            Clock::starting_at(now, interval)
+        };
+
+        Self { sim, clock, speed }
     }
 
     pub(crate) fn handle(&mut self, request: Request, now: Instant) {
@@ -62,7 +68,7 @@ impl Engine {
 
     pub(crate) fn snapshot(&self) -> Snapshot {
         Snapshot {
-            state: self.sim.state().clone(),
+            state: Arc::new(self.sim.state().clone()),
             paused: self.clock.is_paused(),
             speed: self.speed,
         }
@@ -82,6 +88,7 @@ mod tests {
         Engine::new(
             Simulation::new(Name::default(), Sex::Female),
             Speed::BASE,
+            false,
             start,
         )
     }
@@ -119,6 +126,27 @@ mod tests {
         engine.handle(Request::Resume, start + INTERVAL * 5);
         assert!(engine.advance(start + INTERVAL * 6));
         assert!(!engine.snapshot().paused);
+        assert_eq!(engine.snapshot().state.time, after_ticks(1));
+    }
+
+    #[test]
+    fn engine_started_paused_keeps_its_speed_for_later() {
+        let start = Instant::now();
+        let fast = Speed::new(10);
+        let interval = fast.tick_interval();
+        let mut engine = Engine::new(
+            Simulation::new(Name::default(), Sex::Female),
+            fast,
+            true,
+            start,
+        );
+
+        assert!(engine.snapshot().paused);
+        assert_eq!(engine.snapshot().speed, fast);
+        assert!(!engine.advance(start + interval * 5));
+
+        engine.handle(Request::Resume, start + interval * 5);
+        assert!(engine.advance(start + interval * 6));
         assert_eq!(engine.snapshot().state.time, after_ticks(1));
     }
 

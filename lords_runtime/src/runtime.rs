@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, RecvError, RecvTimeoutError, Sender};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use log::{error, warn};
@@ -18,17 +18,29 @@ const SLEEP_MARGIN: Duration = Duration::from_millis(20);
 pub struct Runtime {
     requests: Sender<Request>,
     published: Arc<Published>,
+    thread: JoinHandle<()>,
 }
 
 impl Runtime {
     /// Moves `sim` to a new thread and starts ticking it at [`Speed::BASE`].
     pub fn spawn(sim: Simulation, on_publish: impl Fn() + Send + 'static) -> Self {
-        let engine = Engine::new(sim, Speed::BASE, Instant::now());
+        Self::spawn_with(sim, Speed::BASE, false, on_publish)
+    }
+
+    /// Moves `sim` to a new thread, to tick at `speed`, at once or, if `paused`, once it is
+    /// resumed.
+    pub fn spawn_with(
+        sim: Simulation,
+        speed: Speed,
+        paused: bool,
+        on_publish: impl Fn() + Send + 'static,
+    ) -> Self {
+        let engine = Engine::new(sim, speed, paused, Instant::now());
         let published = Arc::new(Published::new(engine.snapshot()));
         let (requests, received) = mpsc::channel();
 
         let thread_published = Arc::clone(&published);
-        thread::Builder::new()
+        let thread = thread::Builder::new()
             .name("simulation".to_owned())
             .spawn(move || run(engine, &received, &thread_published, on_publish))
             .expect("failed to spawn the simulation thread");
@@ -36,12 +48,20 @@ impl Runtime {
         Self {
             requests,
             published,
+            thread,
         }
     }
 
     /// Returns the simulation as it was last published.
     pub fn snapshot(&self) -> Arc<Snapshot> {
         self.published.get()
+    }
+
+    /// Returns whether the simulation thread is still there to tick and to take requests.
+    ///
+    /// It only ever stops while this handle exists by panicking.
+    pub fn is_running(&self) -> bool {
+        !self.thread.is_finished()
     }
 
     pub fn pause(&self) {
@@ -148,6 +168,21 @@ mod tests {
                 .recv_timeout(TIMEOUT)
                 .expect("the pause was never published");
         }
+    }
+
+    #[test]
+    fn simulation_can_start_paused_at_a_speed() {
+        let runtime = Runtime::spawn_with(
+            Simulation::new(Name::default(), Sex::Female),
+            Speed::MAX,
+            true,
+            || {},
+        );
+
+        let snapshot = runtime.snapshot();
+        assert!(snapshot.paused);
+        assert_eq!(snapshot.speed, Speed::MAX);
+        assert!(runtime.is_running());
     }
 
     #[test]

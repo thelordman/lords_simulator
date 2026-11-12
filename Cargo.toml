@@ -1,11 +1,31 @@
 [workspace]
 resolver = "3"
-members = ["lords_gui", "lords_runtime", "lords_sim"]
+members = ["lords_gui", "lords_runtime", "lords_save", "lords_sim"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Lord"]
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+eframe = { version = "0.37.0", default-features = false }
+egui = "0.37.0"
+log = "0.4.34"
+ron = "0.12"
+serde = { version = "1", features = ["derive"] }
+tempfile = "3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
 
 [profile.release]
 opt-level = 3
 
 [profile.dev.package."*"]
 opt-level = 2
-
-[patch.crates-io]

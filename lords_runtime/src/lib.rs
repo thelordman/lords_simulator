@@ -9,9 +9,6 @@
 //! The crate knows nothing about what the simulation contains. Changes to the world are
 //! [`lords_sim::Command`]s, which it passes along untouched.
 
-#![forbid(unsafe_code)]
-#![warn(clippy::all, rust_2018_idioms)]
-
 mod clock;
 mod engine;
 mod runtime;

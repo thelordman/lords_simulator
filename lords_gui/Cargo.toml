@@ -1,27 +1,35 @@
 [package]
 name = "lords_gui"
-version = "0.1.0"
-authors = ["Lord"]
-edition = "2024"
-include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
-rust-version = "1.92.0"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 default-run = "lords_simulator"
 
+[lints]
+workspace = true
+
 [dependencies]
-lords_sim = { path = "../lords_sim" }
 lords_runtime = { path = "../lords_runtime" }
-egui = "0.37.0"
-eframe = { version = "0.37.0", default-features = false, features = [
+lords_save = { path = "../lords_save" }
+lords_sim = { path = "../lords_sim" }
+eframe = { workspace = true, features = [
     "accesskit",
     "default_fonts",
     "glow",
+    "persistence",
     "wayland",
     "x11",
 ] }
-log = "0.4.29"
+egui.workspace = true
 env_logger = "0.11.8"
+log.workspace = true
+serde.workspace = true
 
 [[bin]]
 name = "lords_simulator"
 path = "src/main.rs"
+
+[dev-dependencies]
+tempfile.workspace = true

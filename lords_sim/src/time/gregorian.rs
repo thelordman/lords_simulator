@@ -121,6 +121,22 @@ impl Date {
             calendar_years.saturating_sub(1)
         }
     }
+
+    /// Returns the number of full months from `earlier` to this date.
+    pub const fn months_since(self, earlier: Self) -> u64 {
+        if self.year < earlier.year {
+            return 0;
+        }
+
+        let calendar_months = ((self.year - earlier.year) * 12 + self.month as u64)
+            .saturating_sub(earlier.month as u64);
+
+        if self.day >= earlier.day {
+            calendar_months
+        } else {
+            calendar_months.saturating_sub(1)
+        }
+    }
 }
 
 impl From<Timestamp> for Date {
@@ -316,5 +332,40 @@ mod tests {
         assert_eq!(date(5, 2, 28).years_since(leap_day_birth), 0);
         assert_eq!(date(5, 3, 1).years_since(leap_day_birth), 1);
         assert_eq!(date(8, 2, 29).years_since(leap_day_birth), 4);
+    }
+
+    #[test]
+    fn months_since_counts_only_completed_months() {
+        let birth = date(10, 6, 15);
+
+        assert_eq!(date(10, 6, 15).months_since(birth), 0);
+        assert_eq!(date(10, 7, 14).months_since(birth), 0);
+        assert_eq!(date(10, 7, 15).months_since(birth), 1);
+        assert_eq!(date(11, 1, 15).months_since(birth), 7);
+        assert_eq!(date(11, 6, 14).months_since(birth), 11);
+        assert_eq!(date(11, 6, 15).months_since(birth), 12);
+        assert_eq!(date(10, 5, 31).months_since(birth), 0);
+        assert_eq!(date(9, 12, 31).months_since(birth), 0);
+
+        let end_of_month_birth = date(10, 1, 31);
+
+        assert_eq!(date(10, 2, 28).months_since(end_of_month_birth), 0);
+        assert_eq!(date(10, 3, 1).months_since(end_of_month_birth), 1);
+        assert_eq!(date(10, 3, 31).months_since(end_of_month_birth), 2);
+    }
+
+    #[test]
+    fn twelve_months_make_year() {
+        let birth = date(4, 2, 29);
+        let mut day = birth;
+
+        for _ in 0..3 * DAYS_PER_FOUR_YEARS {
+            assert_eq!(
+                day.months_since(birth) / 12,
+                day.years_since(birth),
+                "{day}"
+            );
+            day = day_after(day);
+        }
     }
 }

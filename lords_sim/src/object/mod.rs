@@ -1,8 +1,11 @@
-use crate::Timestamp;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+use crate::Timestamp;
+
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Object {
     location: Location,
     creation: Timestamp,
@@ -25,7 +28,7 @@ impl Object {
 /// The coordinates are stored as integers, and floating point errors are not a consideration.
 /// This location implementation should only be used for simplistic representations of 2-dimensional flat worlds
 /// and never in more complex, planetary contexts.
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Location {
     x: i64,
     y: i64,
@@ -37,7 +40,7 @@ impl Location {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Animal {
     object: Object,
     name: Name,
@@ -54,7 +57,7 @@ impl Animal {
     }
 }
 
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Name {
     first: String,
     middle: Vec<String>,
@@ -101,7 +104,7 @@ impl Display for Name {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Sex {
     Male,
     Female,
@@ -113,7 +116,7 @@ impl Display for Sex {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Human {
     animal: Animal,
 }

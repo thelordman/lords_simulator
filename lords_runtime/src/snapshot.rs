@@ -7,7 +7,8 @@ use crate::speed::Speed;
 /// The simulation as it was when the simulation thread last published it.
 #[derive(Debug)]
 pub struct Snapshot {
-    pub state: State,
+    /// Shared, so that it can be handed on, for instance to be saved, without copying it.
+    pub state: Arc<State>,
     pub paused: bool,
     pub speed: Speed,
 }
