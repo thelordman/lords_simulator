@@ -1,10 +1,13 @@
+mod ground;
+
 use egui::RichText;
+use lords_sim::object::{Activity, Living};
 use lords_sim::perception::Sighting;
-use lords_sim::view::Walk;
-use lords_sim::world::{Kind, PlantSpecies};
-use lords_sim::{Bearing, Command, Length, Subject, View};
+use lords_sim::world::Kind;
+use lords_sim::{Command, Subject, View};
 
 use super::Pointed;
+use super::words::{compass_point, distance, gathering, kind_name, roughly};
 
 const ROW_SPACING: egui::Vec2 = egui::vec2(16.0, 6.0);
 const SECTION_SPACING: f32 = 12.0;
@@ -22,8 +25,11 @@ pub fn show(ui: &mut egui::Ui, view: &View, highlighted: Option<Subject>) -> Poi
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(ui, |ui| {
-                if activity(ui, view.walk.as_ref()) {
+                if activity(ui, view) {
                     pointed.command = Some(Command::Stop);
+                }
+                if let Some(command) = ground::show(ui, view.ground.as_ref(), &view.player) {
+                    pointed.command = Some(command);
                 }
 
                 let surroundings = &view.surroundings;
@@ -110,18 +116,14 @@ struct Section {
     hovered: Option<Subject>,
 }
 
-fn activity(ui: &mut egui::Ui, walk: Option<&Walk>) -> bool {
+fn activity(ui: &mut egui::Ui, view: &View) -> bool {
     let mut stop = false;
 
     ui.horizontal(|ui| {
         ui.set_min_height(ui.spacing().interact_size.y);
-        match walk {
-            Some(walk) => {
-                ui.label(format!(
-                    "Walking to the {}, {} to go",
-                    name(walk.toward).to_lowercase(),
-                    distance(walk.remaining)
-                ));
+        match doing(view) {
+            Some(doing) => {
+                ui.label(doing);
                 stop = ui.button("Stop").clicked();
             }
             None => {
@@ -134,6 +136,20 @@ fn activity(ui: &mut egui::Ui, walk: Option<&Walk>) -> bool {
     stop
 }
 
+fn doing(view: &View) -> Option<String> {
+    match view.player.activity()? {
+        Activity::Walking { .. } => {
+            let walk = view.walk.as_ref()?;
+            Some(format!(
+                "Walking to the {}, {} to go",
+                kind_name(walk.toward).to_lowercase(),
+                distance(walk.remaining)
+            ))
+        }
+        Activity::Gathering { item, gathered, .. } => Some(gathering(item, gathered)),
+    }
+}
+
 fn section(ui: &mut egui::Ui, category: Category, rows: &[Row<'_>]) -> Section {
     let mut section = Section::default();
     let seen: u32 = rows.iter().map(|row| row.sighting.count).sum();
@@ -141,7 +157,7 @@ fn section(ui: &mut egui::Ui, category: Category, rows: &[Row<'_>]) -> Section {
 
     ui.horizontal(|ui| {
         ui.label(RichText::new(category.title()).strong());
-        ui.label(RichText::new(seen.to_string()).weak());
+        ui.label(RichText::new(roughly(seen)).weak());
     });
     egui::ScrollArea::vertical()
         .id_salt(category.title())
@@ -191,21 +207,11 @@ fn section(ui: &mut egui::Ui, category: Category, rows: &[Row<'_>]) -> Section {
 }
 
 fn label(sighting: &Sighting) -> String {
-    let name = name(sighting.kind);
+    let name = kind_name(sighting.kind);
     if sighting.count > 1 {
-        format!("{name} ×{}", sighting.count)
+        format!("{name} ×{}", roughly(sighting.count))
     } else {
-        name.to_owned()
-    }
-}
-
-pub(super) fn name(kind: Kind) -> &'static str {
-    match kind {
-        Kind::Plant(PlantSpecies::Spruce) => "Spruce",
-        Kind::Plant(PlantSpecies::Pine) => "Pine",
-        Kind::Plant(PlantSpecies::Birch) => "Birch",
-        Kind::Rock => "Boulder",
-        Kind::Lake => "Lake",
+        name
     }
 }
 
@@ -218,40 +224,12 @@ fn distance_to(sighting: &Sighting) -> String {
     }
 }
 
-pub(super) fn distance(length: Length) -> String {
-    let millimeters = length.as_millimeters();
-    if millimeters < 1_000 {
-        return "under 1 m".to_owned();
-    }
-
-    let precision = if millimeters < 10_000 {
-        1_000
-    } else if millimeters < 100_000 {
-        5_000
-    } else {
-        10_000
-    };
-    let rounded = (millimeters + precision / 2) / precision * precision;
-    format!("{} m", rounded / 1_000)
-}
-
-fn compass_point(bearing: Bearing) -> &'static str {
-    match bearing {
-        Bearing::North => "N",
-        Bearing::Northeast => "NE",
-        Bearing::East => "E",
-        Bearing::Southeast => "SE",
-        Bearing::South => "S",
-        Bearing::Southwest => "SW",
-        Bearing::West => "W",
-        Bearing::Northwest => "NW",
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use lords_sim::world::{Area, AreaKind};
-    use lords_sim::{Name, Sex, Simulation, World};
+    use lords_sim::world::{
+        Area, AreaKind, GroundType, Patch, Species, Terrain, Vegetation, VegetationKind,
+    };
+    use lords_sim::{Bearing, Item, Length, Location, Name, Sex, Simulation, State, World};
 
     use super::*;
     use crate::scenes::harness::Harness;
@@ -269,29 +247,15 @@ mod tests {
     }
 
     #[test]
-    fn distance_is_rounded_more_roughly_the_farther_it_is() {
-        let worded = |millimeters| distance(Length::from_millimeters(millimeters));
-
-        assert_eq!(worded(0), "under 1 m");
-        assert_eq!(worded(999), "under 1 m");
-        assert_eq!(worded(1_000), "1 m");
-        assert_eq!(worded(3_600), "4 m");
-        assert_eq!(worded(9_400), "9 m");
-        assert_eq!(worded(12_000), "10 m");
-        assert_eq!(worded(13_000), "15 m");
-        assert_eq!(worded(97_000), "95 m");
-        assert_eq!(worded(104_000), "100 m");
-        assert_eq!(worded(138_000), "140 m");
-    }
-
-    #[test]
     fn sighting_of_several_says_how_many_and_how_near() {
         let one = sighting(Kind::Rock, 1, 4_000);
-        let many = sighting(Kind::Plant(PlantSpecies::Spruce), 41, 23_000);
+        let few = sighting(Kind::Plant(Species::Pine), 12, 15_000);
+        let many = sighting(Kind::Plant(Species::Spruce), 41, 23_000);
 
         assert_eq!(label(&one), "Boulder");
         assert_eq!(distance_to(&one), "4 m");
-        assert_eq!(label(&many), "Spruce ×41");
+        assert_eq!(label(&few), "Pine ×12");
+        assert_eq!(label(&many), "Spruce ×~40");
         assert_eq!(distance_to(&many), "from 25 m");
     }
 
@@ -318,6 +282,57 @@ mod tests {
         let walking = forest.view();
         assert!(walking.walk.is_some());
         harness.show(|ui| assert_eq!(show(ui, &walking, None), Pointed::default()));
+    }
+
+    #[test]
+    fn doing_says_where_the_walk_goes_and_what_gathering_has_turned_up() {
+        let meadow = Vegetation::typical(VegetationKind::ShoreMeadow);
+        let mud = Patch::new(GroundType::Mud, Some(meadow), 4_000);
+        let mut world = World::default();
+        world.set_terrain(Terrain::new(Location::new(-2_000, -2_000), 1, [mud]));
+        let lake = world.add_area(Area::new(
+            AreaKind::Lake,
+            [(-5_000, 20_000), (5_000, 20_000), (0, 30_000)]
+                .into_iter()
+                .map(|(x, y)| Location::new(x, y))
+                .collect(),
+        ));
+        let mut sim = Simulation::from_state(State {
+            world,
+            ..State::new(Name::default(), Sex::Female)
+        });
+        assert_eq!(doing(&sim.view()), None);
+
+        sim.apply(Command::Gather(Item::Pebble));
+        assert_eq!(doing(&sim.view()).as_deref(), Some("Searching for pebbles"));
+        while sim.state().player.inventory().is_empty() {
+            sim.tick();
+        }
+        assert_eq!(
+            doing(&sim.view()).as_deref(),
+            Some("Searching for pebbles, 1 found")
+        );
+
+        sim.apply(Command::Gather(Item::Picked(Species::BottleSedge)));
+        while sim
+            .state()
+            .player
+            .inventory()
+            .count(Item::Picked(Species::BottleSedge))
+            < 2
+        {
+            sim.tick();
+        }
+        assert_eq!(
+            doing(&sim.view()).as_deref(),
+            Some("Picking tufts of bottle sedge, 2 picked")
+        );
+
+        sim.apply(Command::WalkTo(Subject::Area(lake)));
+        assert_eq!(
+            doing(&sim.view()).as_deref(),
+            Some("Walking to the lake, 20 m to go")
+        );
     }
 
     #[test]

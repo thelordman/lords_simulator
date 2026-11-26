@@ -278,7 +278,6 @@ fn group(saves: Vec<SaveEntry>) -> Vec<Playthrough> {
             Some(playthrough) => playthrough.saves.push(save),
             None => playthroughs.push(Playthrough {
                 id,
-                // The newest save names the group.
                 character: save.header.character.clone(),
                 saves: vec![save],
             }),

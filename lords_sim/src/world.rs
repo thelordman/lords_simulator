@@ -1,15 +1,24 @@
 mod area;
+mod biome;
 mod generate;
 pub(crate) mod index;
+mod season;
+mod species;
 mod store;
+mod terrain;
 mod thing;
 
 use serde::{Deserialize, Serialize};
 
 pub use self::area::{Area, AreaKind};
+pub use self::biome::{Biome, Stand};
+pub use self::season::Season;
+pub use self::species::{Crop, Form, Part, Species};
 pub use self::store::Store;
-pub use self::thing::{Plant, PlantSpecies, Rock, Thing};
+pub use self::terrain::{Abundance, GroundType, Patch, Terrain, Vegetation, VegetationKind};
+pub use self::thing::{Plant, Rock, Thing};
 use crate::space::{Length, Location};
+use crate::time::Timestamp;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -41,15 +50,21 @@ pub enum Subject {
 /// What a subject is, as far as telling it apart from others goes.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Kind {
-    Plant(PlantSpecies),
+    Plant(Species),
     Rock,
     Lake,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct World {
+    #[serde(default)]
+    biome: Biome,
+    #[serde(default)]
+    seed: u64,
     things: Store<Thing>,
     areas: Vec<Area>,
+    #[serde(default)]
+    terrain: Terrain,
 }
 
 impl World {
@@ -76,6 +91,31 @@ impl World {
 
     pub fn areas(&self) -> impl Iterator<Item = (AreaId, &Area)> {
         (0..).map(AreaId).zip(&self.areas)
+    }
+
+    pub fn biome(&self) -> Biome {
+        self.biome
+    }
+
+    pub fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    /// Returns the season at `now`.
+    pub fn season(&self, now: Timestamp) -> Season {
+        Season::at(self.seed, now)
+    }
+
+    pub fn terrain(&self) -> &Terrain {
+        &self.terrain
+    }
+
+    pub(crate) fn terrain_mut(&mut self) -> &mut Terrain {
+        &mut self.terrain
+    }
+
+    pub fn set_terrain(&mut self, terrain: Terrain) {
+        self.terrain = terrain;
     }
 
     pub fn kind(&self, subject: Subject) -> Option<Kind> {
@@ -125,7 +165,7 @@ mod tests {
     fn birch(x: i64, y: i64) -> Thing {
         Thing::Plant(Plant::new(
             Object::new(Location::new(x, y), Default::default()),
-            PlantSpecies::Birch,
+            Species::Birch,
             Length::from_meters(15),
             Length::from_millimeters(300),
         ))
@@ -150,7 +190,7 @@ mod tests {
 
         assert_eq!(
             world.kind(Subject::Thing(tree)),
-            Some(Kind::Plant(PlantSpecies::Birch))
+            Some(Kind::Plant(Species::Birch))
         );
         assert_eq!(world.kind(Subject::Area(water)), Some(Kind::Lake));
         assert_eq!(world.things().map(|(id, _)| id).collect::<Vec<_>>(), [tree]);

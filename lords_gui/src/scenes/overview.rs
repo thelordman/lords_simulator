@@ -1,7 +1,9 @@
 mod character;
 mod map;
+mod meter;
 mod surroundings;
 mod time_bar;
+mod words;
 
 use std::time::Instant;
 
@@ -58,11 +60,11 @@ impl Scene for Overview {
         let format = &shared.settings.datetime;
         time_bar::show(ui, runtime, &snapshot, format, keyboard_free);
         let mut leave = !runtime.is_running() && stopped_banner(ui);
-        character::show(ui, &view.player, view.time, format);
+        let dropped = character::show(ui, &view.player, view.time, format);
         let on_map = map::show(ui, view, &mut self.map_reach, self.hovered);
         let in_list = surroundings::show(ui, view, self.hovered);
         self.hovered = on_map.hovered.or(in_list.hovered);
-        if let Some(command) = on_map.command.or(in_list.command) {
+        if let Some(command) = dropped.or(on_map.command).or(in_list.command) {
             runtime.send(command);
         }
 

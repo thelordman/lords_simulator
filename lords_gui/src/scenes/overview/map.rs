@@ -1,3 +1,5 @@
+mod ground;
+
 use std::iter;
 use std::ops::RangeInclusive;
 
@@ -5,13 +7,13 @@ use egui::{Align2, Color32, FontId, Pos2, Rect, Sense, Shape, Stroke};
 use lords_sim::map::{Map, Mark, RANGE, Water};
 use lords_sim::object::Living;
 use lords_sim::time::gregorian::{SECONDS_PER_DAY, SECONDS_PER_HOUR, SECONDS_PER_MINUTE};
-use lords_sim::world::{Kind, PlantSpecies};
+use lords_sim::world::{Kind, Species};
 use lords_sim::{Command, Length, Location, Subject, Timestamp, View};
 
 use crate::scenes::count;
 
 use super::Pointed;
-use super::surroundings::{distance, name};
+use super::words::{distance, kind_name};
 
 /// How many meters there are from the player to the edges of the map at first.
 pub const DEFAULT_REACH: f32 = 50.0;
@@ -92,6 +94,12 @@ fn chart(ui: &mut egui::Ui, view: &View, reach: &mut f32, highlighted: Option<Su
     let lit = |subject| pointed_at == Some(subject) || highlighted == Some(subject);
 
     painter.rect_filled(rect, CORNER_RADIUS, palette.ground);
+    painter.add(ground::draw(
+        &map.ground,
+        projection,
+        rect,
+        ui.visuals().dark_mode,
+    ));
     for water in &map.waters {
         let width = if lit(water.subject) { 3.0 } else { 1.5 };
         painter.add(surface(water, projection, palette.water));
@@ -135,11 +143,18 @@ fn chart(ui: &mut egui::Ui, view: &View, reach: &mut f32, highlighted: Option<Su
     legend(&painter, rect, projection, &palette);
 
     let clicked = response.clicked();
-    if let Some(subject) = pointed_at {
-        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-        if let Some(description) = describe(subject, map, projection, view.time) {
-            response.on_hover_text_at_pointer(description);
+    let description = match pointed_at {
+        Some(subject) => {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+            describe(subject, map, projection, view.time)
         }
+        None => response
+            .hover_pos()
+            .and_then(|pointer| ground::under(pointer, &map.ground, projection))
+            .map(ground::describe),
+    };
+    if let Some(description) = description {
+        response.on_hover_text_at_pointer(description);
     }
 
     Pointed {
@@ -258,7 +273,7 @@ fn describe(subject: Subject, map: &Map, projection: Projection, now: Timestamp)
 
         Some(format!(
             "{}, {}{seen}",
-            name(mark.kind),
+            kind_name(mark.kind),
             distance(away.max(Length::ZERO))
         ))
     } else {
@@ -267,7 +282,7 @@ fn describe(subject: Subject, map: &Map, projection: Projection, now: Timestamp)
         let away =
             Length::from_millimeters((points / projection.points_per_meter * 1_000.0) as i64);
 
-        Some(format!("{}, {}", name(water.kind), distance(away)))
+        Some(format!("{}, {}", kind_name(water.kind), distance(away)))
     }
 }
 
@@ -349,6 +364,8 @@ struct Palette {
     spruce: Color32,
     pine: Color32,
     birch: Color32,
+    /// For any other plant.
+    plant: Color32,
     rock: Color32,
     strong: Color32,
     weak: Color32,
@@ -367,6 +384,7 @@ impl Palette {
                 spruce: Color32::from_rgb(44, 128, 82),
                 pine: Color32::from_rgb(122, 158, 62),
                 birch: Color32::from_rgb(214, 204, 110),
+                plant: Color32::from_rgb(96, 150, 96),
                 rock: Color32::from_rgb(146, 146, 154),
                 strong,
                 weak,
@@ -379,6 +397,7 @@ impl Palette {
                 spruce: Color32::from_rgb(24, 98, 58),
                 pine: Color32::from_rgb(104, 146, 44),
                 birch: Color32::from_rgb(178, 160, 30),
+                plant: Color32::from_rgb(70, 124, 70),
                 rock: Color32::from_rgb(118, 118, 126),
                 strong,
                 weak,
@@ -388,9 +407,10 @@ impl Palette {
 
     fn of_kind(&self, kind: Kind) -> Color32 {
         match kind {
-            Kind::Plant(PlantSpecies::Spruce) => self.spruce,
-            Kind::Plant(PlantSpecies::Pine) => self.pine,
-            Kind::Plant(PlantSpecies::Birch) => self.birch,
+            Kind::Plant(Species::Spruce) => self.spruce,
+            Kind::Plant(Species::Pine) => self.pine,
+            Kind::Plant(Species::Birch) => self.birch,
+            Kind::Plant(_) => self.plant,
             Kind::Rock => self.rock,
             Kind::Lake => self.water,
         }
@@ -446,10 +466,10 @@ mod tests {
         let radius =
             |kind, footprint| Dot::of(&mark(subject, kind, 0, 0, footprint), PROJECTION).radius;
 
-        assert_eq!(radius(Kind::Plant(PlantSpecies::Pine), 200), 3.2);
+        assert_eq!(radius(Kind::Plant(Species::Pine), 200), 3.2);
         assert_eq!(radius(Kind::Rock, 1_250), 2.5);
         assert_eq!(radius(Kind::Rock, 150), SMALLEST_DOT);
-        assert_eq!(radius(Kind::Plant(PlantSpecies::Pine), 40), SMALLEST_DOT);
+        assert_eq!(radius(Kind::Plant(Species::Pine), 40), SMALLEST_DOT);
     }
 
     #[test]
@@ -529,7 +549,11 @@ mod tests {
             ..PROJECTION
         };
 
-        let described = format!("{}, {}", name(nearest.kind), distance(nearest.distance));
+        let described = format!(
+            "{}, {}",
+            kind_name(nearest.kind),
+            distance(nearest.distance)
+        );
         let later = Timestamp::from_seconds(view.time.as_seconds() + 2 * 3_600);
         let mut remembered = (*view.map).clone();
         for mark in &mut remembered.things {

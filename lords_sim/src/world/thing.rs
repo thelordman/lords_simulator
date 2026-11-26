@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::object::Object;
 use crate::space::{Length, Location};
-use crate::world::Kind;
+use crate::world::{Kind, Species};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Thing {
@@ -46,21 +46,17 @@ impl Thing {
     }
 }
 
+/// A plant that stands as a thing of its own, such as a tree.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Plant {
     object: Object,
-    species: PlantSpecies,
+    species: Species,
     height: Length,
     trunk_diameter: Length,
 }
 
 impl Plant {
-    pub fn new(
-        object: Object,
-        species: PlantSpecies,
-        height: Length,
-        trunk_diameter: Length,
-    ) -> Self {
+    pub fn new(object: Object, species: Species, height: Length, trunk_diameter: Length) -> Self {
         Self {
             object,
             species,
@@ -69,7 +65,7 @@ impl Plant {
         }
     }
 
-    pub fn species(&self) -> PlantSpecies {
+    pub fn species(&self) -> Species {
         self.species
     }
 
@@ -80,13 +76,6 @@ impl Plant {
     pub fn trunk_diameter(&self) -> Length {
         self.trunk_diameter
     }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum PlantSpecies {
-    Spruce,
-    Pine,
-    Birch,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

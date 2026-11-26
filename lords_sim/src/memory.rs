@@ -11,6 +11,9 @@ pub struct Memory {
     things: Store<Option<Timestamp>>,
     /// For each area, the edges of its outline that have been seen.
     shores: Vec<Marks>,
+    /// The patches of the terrain that have been seen, by their index.
+    #[serde(default)]
+    ground: Marks,
 }
 
 impl Memory {
@@ -35,6 +38,11 @@ impl Memory {
         self.shore(area).is_some_and(|shore| shore.has(edge))
     }
 
+    /// Returns whether the patch of the terrain at `index` has been seen.
+    pub fn knows_patch(&self, index: u32) -> bool {
+        self.ground.has(index)
+    }
+
     /// Remembers the thing as seen at `now`.
     pub(crate) fn note_thing(&mut self, id: ThingId, now: Timestamp) {
         if self.last_seen(id) == Some(now) {
@@ -55,6 +63,10 @@ impl Memory {
             self.shores.resize_with(area + 1, Marks::default);
         }
         self.shores[area].mark(edge);
+    }
+
+    pub(crate) fn note_patch(&mut self, index: u32) {
+        self.ground.mark(index);
     }
 
     fn shore(&self, area: AreaId) -> Option<&Marks> {
@@ -124,6 +136,7 @@ mod tests {
         memory.note_thing(things[19_999], NOW);
         memory.note_edge(areas[1], 63);
         memory.note_edge(areas[1], 70);
+        memory.note_patch(9_000);
 
         for (index, thing) in things.iter().enumerate() {
             let noted = [0, 255, 256, 19_999].contains(&index);
@@ -136,6 +149,9 @@ mod tests {
         assert!(!memory.knows_edge(areas[1], 69));
         assert!(!memory.knows_edge(areas[0], 70));
         assert!(!memory.knows_edge(areas[2], 70));
+        assert!(memory.knows_patch(9_000));
+        assert!(!memory.knows_patch(8_999));
+        assert!(!memory.knows_patch(0));
         assert!(memory.knows(Subject::Area(areas[1])));
         assert!(!memory.knows(Subject::Area(areas[0])));
         assert!(!memory.knows(Subject::Area(areas[2])));
@@ -164,6 +180,7 @@ mod tests {
         memory.note_thing(things[5], NOW);
         memory.note_thing(things[19_999], Timestamp::EPOCH);
         memory.note_edge(areas[2], 3);
+        memory.note_patch(42);
 
         let written = ron::to_string(&memory).expect("the memory encodes");
         let read: Memory = ron::from_str(&written).expect("the memory decodes");
@@ -177,10 +194,12 @@ mod tests {
         let mut memory = Memory::default();
         memory.note_thing(things[5], NOW);
         memory.note_edge(areas[0], 3);
+        memory.note_patch(7);
         let before = memory.clone();
 
         memory.note_thing(things[5], NOW);
         memory.note_edge(areas[0], 3);
+        memory.note_patch(7);
 
         assert_eq!(memory, before);
     }

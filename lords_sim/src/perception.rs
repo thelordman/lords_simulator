@@ -13,6 +13,9 @@ pub const NEARBY: Length = Length::from_meters(10);
 /// The farthest anything is seen from.
 pub const SIGHT_LIMIT: Length = Length::from_meters(300);
 
+/// How far away the kind of ground and what grows on it can still be made out.
+pub const GROUND_SIGHT: Length = Length::from_meters(30);
+
 /// How many times its own width away a thing can still be made out.
 const ACUITY: i64 = 300;
 
@@ -65,6 +68,8 @@ pub(crate) struct Seen {
     /// The edges of the outlines of areas of which some point is seen, each numbered by
     /// the point of the outline it starts from.
     pub(crate) shores: Vec<(AreaId, u32)>,
+    /// The indexes of the terrain that can be seen.
+    pub(crate) ground: Vec<u32>,
 }
 
 /// Returns what a perceiver whose eyes are above `eye` sees.
@@ -136,7 +141,19 @@ pub(crate) fn look(world: &World, grid: &Grid, eye: Location) -> Seen {
         surroundings: arrange(sightings),
         things,
         shores,
+        ground: ground_in_sight(world, eye),
     }
+}
+
+/// Returns the patches of the terrain whose middle is within [`GROUND_SIGHT`] of `eye`.
+fn ground_in_sight(world: &World, eye: Location) -> Vec<u32> {
+    let terrain = world.terrain();
+
+    terrain
+        .around(eye, GROUND_SIGHT)
+        .map(|(index, _)| index)
+        .filter(|index| eye.distance_to(terrain.middle_of(*index)) <= GROUND_SIGHT)
+        .collect()
 }
 
 fn arrange(mut sightings: Vec<Sighting>) -> Surroundings {
@@ -204,11 +221,11 @@ fn crosses(from: Location, to: Location, middle: Location, radius: Length) -> bo
 mod tests {
     use super::*;
     use crate::object::Object;
-    use crate::world::{Area, AreaKind, Plant, PlantSpecies, Rock, Thing};
+    use crate::world::{Area, AreaKind, GroundType, Patch, Plant, Rock, Species, Terrain, Thing};
 
     const EYE: Location = Location::new(0, 0);
 
-    fn tree(species: PlantSpecies, x: i64, y: i64) -> Thing {
+    fn tree(species: Species, x: i64, y: i64) -> Thing {
         Thing::Plant(Plant::new(
             Object::new(Location::new(x, y), Default::default()),
             species,
@@ -235,11 +252,37 @@ mod tests {
     }
 
     #[test]
+    fn ground_is_made_out_only_up_close() {
+        let mut world = World::default();
+        let patches = (0..100 * 100).map(|_| Patch::new(GroundType::Till, None, 0));
+        world.set_terrain(Terrain::new(
+            Location::new(-200_000, -200_000),
+            100,
+            patches,
+        ));
+        let side = Terrain::PATCH_SIDE.as_millimeters();
+        let eye = Location::new(-200_000 + 5 * side, 0);
+
+        let ground = look(&world, &Grid::new(&world), eye).ground;
+
+        let mut middles = ground.iter().map(|index| world.terrain().middle_of(*index));
+        assert!(
+            middles
+                .clone()
+                .all(|middle| eye.distance_to(middle) <= GROUND_SIGHT)
+        );
+        assert!(middles.any(|middle| middle.x() < -200_000 + side));
+        assert!((140..=175).contains(&ground.len()), "{} seen", ground.len());
+        let empty = World::default();
+        assert!(look(&empty, &Grid::new(&empty), EYE).ground.is_empty());
+    }
+
+    #[test]
     fn thing_behind_a_trunk_is_hidden() {
         let mut world = World::default();
-        let front = Subject::Thing(world.add_thing(tree(PlantSpecies::Spruce, 0, 5_000)));
-        let behind = Subject::Thing(world.add_thing(tree(PlantSpecies::Pine, 0, 20_000)));
-        let beside = Subject::Thing(world.add_thing(tree(PlantSpecies::Birch, 3_000, 20_000)));
+        let front = Subject::Thing(world.add_thing(tree(Species::Spruce, 0, 5_000)));
+        let behind = Subject::Thing(world.add_thing(tree(Species::Pine, 0, 20_000)));
+        let beside = Subject::Thing(world.add_thing(tree(Species::Birch, 3_000, 20_000)));
 
         let surroundings = seen(&world);
 
@@ -252,11 +295,9 @@ mod tests {
     fn thing_below_eye_height_hides_nothing() {
         let mut world = World::default();
         world.add_thing(boulder(0, 5_000, 2_000, 1_000));
-        let behind_a_low_boulder =
-            Subject::Thing(world.add_thing(tree(PlantSpecies::Pine, 0, 20_000)));
+        let behind_a_low_boulder = Subject::Thing(world.add_thing(tree(Species::Pine, 0, 20_000)));
         world.add_thing(boulder(20_000, 0, 2_000, 2_000));
-        let behind_a_tall_boulder =
-            Subject::Thing(world.add_thing(tree(PlantSpecies::Pine, 40_000, 0)));
+        let behind_a_tall_boulder = Subject::Thing(world.add_thing(tree(Species::Pine, 40_000, 0)));
 
         let surroundings = seen(&world);
 
@@ -281,10 +322,10 @@ mod tests {
     #[test]
     fn sightings_are_sorted_into_reach_nearby_and_in_sight() {
         let mut world = World::default();
-        let touching = Subject::Thing(world.add_thing(tree(PlantSpecies::Birch, 0, -900)));
-        let close = Subject::Thing(world.add_thing(tree(PlantSpecies::Birch, 4_000, 0)));
-        let closer = Subject::Thing(world.add_thing(tree(PlantSpecies::Pine, 0, 2_000)));
-        let distant = Subject::Thing(world.add_thing(tree(PlantSpecies::Birch, -30_000, 0)));
+        let touching = Subject::Thing(world.add_thing(tree(Species::Birch, 0, -900)));
+        let close = Subject::Thing(world.add_thing(tree(Species::Birch, 4_000, 0)));
+        let closer = Subject::Thing(world.add_thing(tree(Species::Pine, 0, 2_000)));
+        let distant = Subject::Thing(world.add_thing(tree(Species::Birch, -30_000, 0)));
 
         let surroundings = seen(&world);
         let subjects = |sightings: &[Sighting]| -> Vec<Subject> {
@@ -298,7 +339,7 @@ mod tests {
             surroundings.within_reach[0],
             Sighting {
                 subject: touching,
-                kind: Kind::Plant(PlantSpecies::Birch),
+                kind: Kind::Plant(Species::Birch),
                 count: 1,
                 distance: Length::from_millimeters(750),
                 bearing: Bearing::South,
@@ -309,10 +350,10 @@ mod tests {
     #[test]
     fn distant_things_of_a_kind_are_one_sighting_of_the_nearest() {
         let mut world = World::default();
-        world.add_thing(tree(PlantSpecies::Spruce, 20_000, 30_000));
-        let nearest_spruce = Subject::Thing(world.add_thing(tree(PlantSpecies::Spruce, 0, 15_000)));
-        world.add_thing(tree(PlantSpecies::Spruce, -20_000, 30_000));
-        let pine = Subject::Thing(world.add_thing(tree(PlantSpecies::Pine, 12_000, 0)));
+        world.add_thing(tree(Species::Spruce, 20_000, 30_000));
+        let nearest_spruce = Subject::Thing(world.add_thing(tree(Species::Spruce, 0, 15_000)));
+        world.add_thing(tree(Species::Spruce, -20_000, 30_000));
+        let pine = Subject::Thing(world.add_thing(tree(Species::Pine, 12_000, 0)));
 
         let surroundings = seen(&world);
 
@@ -323,7 +364,7 @@ mod tests {
             surroundings.in_sight[1],
             Sighting {
                 subject: nearest_spruce,
-                kind: Kind::Plant(PlantSpecies::Spruce),
+                kind: Kind::Plant(Species::Spruce),
                 count: 3,
                 distance: Length::from_millimeters(14_850),
                 bearing: Bearing::North,

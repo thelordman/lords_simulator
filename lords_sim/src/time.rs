@@ -37,6 +37,10 @@ impl Timestamp {
         self.ticks.saturating_sub(earlier.ticks) / TICKS_PER_SECOND
     }
 
+    pub(crate) const fn ticks(self) -> u64 {
+        self.ticks
+    }
+
     /// Moves this timestamp forward by one tick.
     pub const fn advance(&mut self) {
         self.ticks += 1;

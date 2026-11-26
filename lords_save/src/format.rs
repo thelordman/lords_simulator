@@ -249,7 +249,8 @@ fn read_exact(reader: &mut impl Read, buffer: &mut [u8]) -> Result<(), SaveError
 
 #[cfg(test)]
 mod tests {
-    use lords_sim::{Name, Sex};
+    use lords_sim::world::Abundance;
+    use lords_sim::{Command, Item, Name, Sex, Simulation};
 
     use super::*;
 
@@ -295,6 +296,38 @@ mod tests {
                     "{codec:?} with {compression:?}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn generated_world_and_what_is_carried_survive_every_codec() {
+        let mut sim = Simulation::generate(Name::default(), Sex::Male, 1);
+        let ground = sim.view().ground.expect("the start has ground");
+        let plant = ground
+            .plants
+            .iter()
+            .find(|plant| plant.crop != Abundance::Gone)
+            .expect("something can be picked at the start");
+        let picked = Item::Picked(plant.species);
+        for item in [Item::Pebble, picked] {
+            sim.apply(Command::Gather(item));
+            for _ in 0..600 {
+                sim.tick();
+            }
+        }
+        let state = sim.state();
+        assert!(state.player.inventory().count(Item::Pebble) > 0);
+        assert!(state.player.inventory().count(picked) > 0);
+
+        for codec in [Codec::MessagePack, Codec::Ron] {
+            let (_, file) =
+                encode(details(), state, codec, Compression::Lz4).expect("the state encodes");
+
+            assert_eq!(
+                decode_state(&file).expect("the file decodes"),
+                *state,
+                "{codec:?}"
+            );
         }
     }
 

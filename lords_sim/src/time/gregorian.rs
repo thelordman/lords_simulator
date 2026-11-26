@@ -106,6 +106,17 @@ impl Date {
         self.day
     }
 
+    /// Returns how many days of its year come before this date.
+    pub const fn day_of_year(self) -> u16 {
+        let days_before_month = if is_leap_year(self.year) {
+            &DAYS_BEFORE_MONTH_LEAP
+        } else {
+            &DAYS_BEFORE_MONTH_COMMON
+        };
+
+        (days_before_month[self.month as usize - 1] + self.day as u64 - 1) as u16
+    }
+
     /// Returns the number of full years from `earlier` to this date, the way an age is counted.
     ///
     /// The anniversary of a 29 February falls on 1 March in common years. If `earlier` is
@@ -201,6 +212,18 @@ impl Display for TimeOfDay {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn day_of_year_counts_from_zero_on_the_first_of_january() {
+        let day = |days: u64| Date::from_days(days).day_of_year();
+
+        assert_eq!(day(0), 0);
+        assert_eq!(day(31), 31);
+        assert_eq!(day(364), 364);
+        assert_eq!(day(365), 0);
+        assert_eq!(Date::from_days(3 * 365 + 59).month(), 2);
+        assert_eq!(Date::from_days(3 * 365 + 365).day_of_year(), 365);
+    }
 
     const fn date(year: u64, month: u8, day: u8) -> Date {
         Date { year, month, day }

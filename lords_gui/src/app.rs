@@ -92,11 +92,11 @@ impl App {
             SceneResponse::LoadSim(save) => {
                 let LoadedSave { header, state } = *save;
                 let label = (header.kind == SaveKind::Manual).then_some(header.label);
-                // Loaded games wait for the player rather than running on at once.
+                let wait_for_the_player = true;
                 let overview = self.overview(
                     Simulation::from_state(state),
                     Speed::new(header.speed),
-                    true,
+                    wait_for_the_player,
                     header.playthrough,
                     label,
                 );

@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
+use crate::item::Item;
 use crate::map::{self, Map, Surface};
 use crate::object::{Activity, Human, Living, Name, Sex};
 use crate::perception::{self, Surroundings};
-use crate::route;
 use crate::space::{Length, Location};
 use crate::state::State;
 use crate::time::{TICKS_PER_SECOND, Timestamp};
-use crate::view::{View, Walk};
+use crate::view::{Ground, Growth, View, Walk};
 use crate::world::index::Grid;
-use crate::world::{Area, AreaKind, Subject, ThingId, World};
+use crate::world::{Area, AreaKind, Subject, ThingId, Vegetation, World};
+use crate::{gather, route};
 
 pub struct Simulation {
     state: State,
@@ -59,34 +60,13 @@ impl Simulation {
     }
 
     pub fn view(&self) -> View {
-        let player = &self.state.player;
-        let walk = player.activity().and_then(|activity| match activity {
-            Activity::Walking {
-                toward,
-                destination,
-            } => {
-                let mut remaining = Length::ZERO;
-                let mut at = player.location();
-                for stop in self.route.iter().copied().chain([destination]) {
-                    remaining = remaining + at.distance_to(stop);
-                    at = stop;
-                }
-
-                Some(Walk {
-                    toward: self.state.world.kind(toward)?,
-                    destination,
-                    via: self.route.clone(),
-                    remaining,
-                })
-            }
-        });
-
         View {
             time: self.state.time,
-            player: player.clone(),
+            player: self.state.player.clone(),
             surroundings: Arc::clone(&self.surroundings),
             map: Arc::clone(&self.map),
-            walk,
+            walk: self.walking(),
+            ground: self.ground(),
         }
     }
 
@@ -94,6 +74,15 @@ impl Simulation {
     pub fn tick(&mut self) {
         self.state.time.advance();
         self.walk();
+
+        let State {
+            player,
+            world,
+            time,
+            ..
+        } = &mut self.state;
+        let season = world.season(*time);
+        gather::tick(player, world.terrain_mut(), *time, season);
     }
 
     /// Applies a change requested from outside the simulation.
@@ -101,11 +90,61 @@ impl Simulation {
         match command {
             Command::Reset => self.state.time = Timestamp::EPOCH,
             Command::WalkTo(subject) => self.walk_to(subject),
-            Command::Stop => {
-                self.state.player.animal_mut().set_activity(None);
-                self.route.clear();
-            }
+            Command::Gather(item) => self.gather(item),
+            Command::Drop { item, count } => self.drop_items(item, count),
+            Command::Stop => self.set_activity(None),
         }
+    }
+
+    fn walking(&self) -> Option<Walk> {
+        let player = &self.state.player;
+        let Some(Activity::Walking {
+            toward,
+            destination,
+        }) = player.activity()
+        else {
+            return None;
+        };
+
+        let mut remaining = Length::ZERO;
+        let mut at = player.location();
+        for stop in self.route.iter().copied().chain([destination]) {
+            remaining = remaining + at.distance_to(stop);
+            at = stop;
+        }
+
+        Some(Walk {
+            toward: self.state.world.kind(toward)?,
+            destination,
+            via: self.route.clone(),
+            remaining,
+        })
+    }
+
+    fn ground(&self) -> Option<Ground> {
+        let season = self.state.world.season(self.state.time);
+        let terrain = self.state.world.terrain();
+        let patch = terrain.patch_at(self.state.player.location())?;
+        let vegetation = patch.vegetation();
+        let shares = vegetation.map_or(&[][..], Vegetation::shares);
+
+        Some(Ground {
+            ground_type: patch.ground_type(),
+            vegetation: vegetation.map(Vegetation::kind),
+            plants: shares
+                .iter()
+                .map(|(species, _)| Growth {
+                    species: *species,
+                    share: patch.share(*species),
+                    crop: gather::abundance(patch, *species, season),
+                })
+                .collect(),
+        })
+    }
+
+    fn set_activity(&mut self, activity: Option<Activity>) {
+        self.state.player.animal_mut().set_activity(activity);
+        self.plan_route();
     }
 
     fn walk_to(&mut self, subject: Subject) {
@@ -122,8 +161,7 @@ impl Simulation {
                 destination,
             });
 
-        self.state.player.animal_mut().set_activity(activity);
-        self.plan_route();
+        self.set_activity(activity);
     }
 
     fn walk(&mut self) {
@@ -173,6 +211,32 @@ impl Simulation {
         }
     }
 
+    fn gather(&mut self, item: Item) {
+        let State {
+            player,
+            world,
+            time,
+            ..
+        } = &self.state;
+
+        let season = world.season(*time);
+        if let Some(gathering) = gather::begin(player, world.terrain(), item, *time, season) {
+            self.set_activity(Some(gathering));
+        }
+    }
+
+    fn drop_items(&mut self, item: Item, count: u32) {
+        let State { player, world, .. } = &mut self.state;
+        let dropped = player.inventory_mut().remove(item, count);
+        if dropped == 0 {
+            return;
+        }
+
+        if let Some(patch) = world.terrain_mut().patch_at_mut(player.location()) {
+            patch.leave(item, dropped);
+        }
+    }
+
     fn plan_route(&mut self) {
         let Some(Activity::Walking { destination, .. }) = self.state.player.activity() else {
             self.route.clear();
@@ -210,6 +274,9 @@ impl Simulation {
         for (area, edge) in &seen.shores {
             memory.note_edge(*area, *edge);
         }
+        for patch in &seen.ground {
+            memory.note_patch(*patch);
+        }
         let mut shore_learned = false;
         for ((id, area), surface) in world.areas().zip(&mut self.surfaces) {
             shore_learned |= surface.update(id, area, memory);
@@ -231,28 +298,29 @@ impl Simulation {
     }
 }
 
-/// A change to the simulation requested from outside it, such as by the player.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
-    /// Rewinds the simulation clock to [`Timestamp::EPOCH`].
     Reset,
-    /// Sends the player walking to something they know of until it is within reach.
     WalkTo(Subject),
-    /// Stops the player's current action.
+    Gather(Item),
+    Drop { item: Item, count: u32 },
     Stop,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::map::Mark;
+    use crate::map::{Mark, Tile};
     use crate::object::Object;
-    use crate::world::{Kind, Plant, PlantSpecies, Rock, Thing};
+    use crate::world::{
+        Abundance, GroundType, Kind, Patch, Plant, Rock, Season, Species, Terrain, Thing,
+        VegetationKind,
+    };
 
     fn birch(x: i64, y: i64) -> Thing {
         Thing::Plant(Plant::new(
             Object::new(Location::new(x, y), Default::default()),
-            PlantSpecies::Birch,
+            Species::Birch,
             Length::from_meters(15),
             Length::from_millimeters(300),
         ))
@@ -280,6 +348,22 @@ mod tests {
             Length::from_millimeters(2_500),
             Length::from_meters(2),
         ))
+    }
+
+    /// Returns a world whose only ground is `patch`, around the center.
+    fn ground(patch: Patch) -> World {
+        let mut world = World::default();
+        let corner = Location::new(-2_000, -2_000);
+        world.set_terrain(Terrain::new(corner, 1, [patch]));
+        world
+    }
+
+    fn gravel() -> Patch {
+        Patch::new(GroundType::Gravel, None, 4_000)
+    }
+
+    fn pebbles(sim: &Simulation) -> u32 {
+        sim.state().player.inventory().count(Item::Pebble)
     }
 
     fn mark(sim: &Simulation, subject: Subject) -> Option<Mark> {
@@ -363,6 +447,7 @@ mod tests {
         assert!(view.surroundings.is_empty());
         assert_eq!(*view.map, Map::default());
         assert_eq!(view.walk, None);
+        assert_eq!(view.ground, None);
     }
 
     #[test]
@@ -371,6 +456,244 @@ mod tests {
 
         assert!(!sim.view().surroundings.is_empty());
         assert_eq!(sim.state().player.location(), Location::default());
+    }
+
+    #[test]
+    fn generated_simulation_starts_on_overgrown_ground() {
+        let sim = Simulation::generate(Name::default(), Sex::Male, 5);
+
+        let ground = sim.view().ground.expect("the start has ground");
+        assert!(ground.vegetation.is_some());
+    }
+
+    #[test]
+    fn view_shows_the_ground_underfoot() {
+        let meadow = Vegetation::new(
+            VegetationKind::ShoreMeadow,
+            vec![(Species::BottleSedge, 60), (Species::CommonReed, 40)],
+        );
+        let mut sim = simulation(ground(Patch::new(GroundType::Mud, Some(meadow), 50)));
+        let expected = |share, crop| Ground {
+            ground_type: GroundType::Mud,
+            vegetation: Some(VegetationKind::ShoreMeadow),
+            plants: vec![
+                Growth {
+                    species: Species::BottleSedge,
+                    share: 60,
+                    crop: Abundance::Plenty,
+                },
+                Growth {
+                    species: Species::CommonReed,
+                    share,
+                    crop,
+                },
+            ],
+        };
+        assert_eq!(sim.view().ground, Some(expected(40, Abundance::Plenty)));
+
+        sim.apply(Command::Gather(Item::Picked(Species::CommonReed)));
+        while sim.state().player.activity().is_some() {
+            sim.tick();
+        }
+
+        assert_eq!(sim.view().ground, Some(expected(38, Abundance::Plenty)));
+    }
+
+    #[test]
+    fn searching_turns_up_pebbles_that_the_player_takes_off_the_ground() {
+        let mut sim = simulation(ground(gravel()));
+
+        sim.apply(Command::Gather(Item::Pebble));
+        for _ in 0..60 {
+            sim.tick();
+        }
+
+        let found = pebbles(&sim);
+        assert!((15..=45).contains(&found), "{found} found");
+        assert!(matches!(
+            sim.state().player.activity(),
+            Some(Activity::Gathering { item: Item::Pebble, gathered, .. }) if gathered == found
+        ));
+        let left = sim.state().world.terrain().patch_at(Location::default());
+        assert_eq!(
+            left.map(|patch| patch.left(Item::Pebble, Season::usual(0))),
+            Some(4_000 - found)
+        );
+    }
+
+    #[test]
+    fn search_that_turns_up_nothing_is_given_up() {
+        let vegetation = Vegetation::typical(VegetationKind::PineBog);
+        let mut sim = simulation(ground(Patch::new(GroundType::Peat, Some(vegetation), 0)));
+
+        sim.apply(Command::Gather(Item::Pebble));
+        for _ in 1..gather::PATIENCE {
+            sim.tick();
+        }
+        assert!(matches!(
+            sim.state().player.activity(),
+            Some(Activity::Gathering { gathered: 0, .. })
+        ));
+
+        sim.tick();
+        assert_eq!(sim.state().player.activity(), None);
+        assert_eq!(pebbles(&sim), 0);
+    }
+
+    #[test]
+    fn nobody_gathers_where_there_is_no_ground() {
+        let mut sim = simulation(World::default());
+
+        sim.apply(Command::Gather(Item::Pebble));
+
+        assert_eq!(sim.state().player.activity(), None);
+    }
+
+    #[test]
+    fn search_carries_on_from_a_state() {
+        let mut sim = simulation(ground(Patch::new(GroundType::Sand, None, 300)));
+        sim.apply(Command::Gather(Item::Pebble));
+        for _ in 0..20 {
+            sim.tick();
+        }
+
+        let mut resumed = Simulation::from_state(sim.state().clone());
+        for _ in 0..100 {
+            sim.tick();
+            resumed.tick();
+        }
+
+        assert_eq!(resumed.state(), sim.state());
+        assert!(pebbles(&sim) > 0);
+    }
+
+    #[test]
+    fn picking_takes_what_grows_until_none_is_seen_to_be_left() {
+        let heath = Vegetation::typical(VegetationKind::BilberryHeath);
+        let mut sim = simulation(ground(Patch::new(GroundType::Till, Some(heath), 0)));
+        let moss = Item::Picked(Species::FeatherMoss);
+
+        sim.apply(Command::Gather(moss));
+        let mut ticks = 0;
+        while sim.state().player.activity().is_some() {
+            assert!(ticks < 2_000, "the picking never ended");
+            sim.tick();
+            ticks += 1;
+        }
+
+        let inventory = sim.state().player.inventory();
+        assert_eq!(inventory.count(moss), 30, "the hands are full first");
+        let patch = sim.state().world.terrain().patch_at(Location::default());
+        assert_eq!(
+            patch.map(|patch| patch.left(moss, Season::usual(0))),
+            Some(50)
+        );
+    }
+
+    #[test]
+    fn nothing_is_picked_where_it_does_not_grow() {
+        let mut sim = simulation(ground(gravel()));
+
+        sim.apply(Command::Gather(Item::Picked(Species::Bilberry)));
+
+        assert_eq!(sim.state().player.activity(), None);
+    }
+
+    #[test]
+    fn gathering_stops_once_the_hands_are_full_and_starts_again_once_emptied() {
+        let mut sim = simulation(ground(gravel()));
+        sim.apply(Command::Gather(Item::Pebble));
+        for _ in 0..2_000 {
+            sim.tick();
+        }
+
+        assert_eq!(sim.state().player.activity(), None);
+        assert_eq!(pebbles(&sim), 150);
+        assert!(!sim.state().player.has_room_for(Item::Pebble));
+        sim.apply(Command::Gather(Item::Pebble));
+        assert_eq!(sim.state().player.activity(), None);
+
+        sim.apply(Command::Drop {
+            item: Item::Pebble,
+            count: 150,
+        });
+        sim.apply(Command::Gather(Item::Pebble));
+
+        assert_eq!(pebbles(&sim), 0);
+        assert!(sim.state().player.activity().is_some());
+        let patch = sim.state().world.terrain().patch_at(Location::default());
+        assert_eq!(
+            patch.map(|patch| patch.left(Item::Pebble, Season::usual(0))),
+            Some(4_000)
+        );
+    }
+
+    #[test]
+    fn some_of_what_is_carried_can_be_dropped_and_no_more_than_is_carried() {
+        let mut sim = simulation(ground(gravel()));
+        sim.apply(Command::Gather(Item::Pebble));
+        while pebbles(&sim) < 5 {
+            sim.tick();
+        }
+        sim.apply(Command::Stop);
+        let drop = |count| Command::Drop {
+            item: Item::Pebble,
+            count,
+        };
+        let left = |sim: &Simulation| {
+            let patch = sim.state().world.terrain().patch_at(Location::default());
+            patch.map(|patch| patch.left(Item::Pebble, Season::usual(0)))
+        };
+
+        sim.apply(drop(2));
+        assert_eq!(pebbles(&sim), 3);
+        assert_eq!(left(&sim), Some(3_997));
+
+        sim.apply(drop(0));
+        assert_eq!(pebbles(&sim), 3);
+
+        sim.apply(drop(10));
+        assert_eq!(pebbles(&sim), 0);
+        assert_eq!(left(&sim), Some(4_000));
+    }
+
+    #[test]
+    fn dropped_plants_are_gone() {
+        let meadow = Vegetation::typical(VegetationKind::ShoreMeadow);
+        let mut sim = simulation(ground(Patch::new(GroundType::Mud, Some(meadow), 0)));
+        let reed = Item::Picked(Species::CommonReed);
+        sim.apply(Command::Gather(reed));
+        while sim.state().player.inventory().is_empty() {
+            sim.tick();
+        }
+
+        sim.apply(Command::Drop {
+            item: reed,
+            count: 1,
+        });
+
+        assert!(sim.state().player.inventory().is_empty());
+        let patch = sim.state().world.terrain().patch_at(Location::default());
+        assert_eq!(
+            patch.map(|patch| patch.left(reed, Season::usual(0))),
+            Some(127)
+        );
+    }
+
+    #[test]
+    fn walking_off_ends_a_search() {
+        let mut world = ground(gravel());
+        let tree = Subject::Thing(world.add_thing(birch(0, 20_000)));
+        let mut sim = simulation(world);
+        sim.apply(Command::Gather(Item::Pebble));
+        sim.tick();
+
+        sim.apply(Command::WalkTo(tree));
+        let carried = pebbles(&sim);
+        walk_until_done(&mut sim);
+
+        assert_eq!(pebbles(&sim), carried);
+        assert!(within_reach(&sim, tree));
     }
 
     #[test]
@@ -383,7 +706,7 @@ mod tests {
         assert_eq!(
             sim.view().walk,
             Some(Walk {
-                toward: Kind::Plant(PlantSpecies::Birch),
+                toward: Kind::Plant(Species::Birch),
                 destination: Location::new(0, 19_450),
                 via: Vec::new(),
                 remaining: Length::from_millimeters(19_450),
@@ -508,7 +831,7 @@ mod tests {
             mark(&sim, tree),
             Some(Mark {
                 subject: tree,
-                kind: Kind::Plant(PlantSpecies::Birch),
+                kind: Kind::Plant(Species::Birch),
                 location: Location::new(3_000, 20_000),
                 footprint: Length::from_millimeters(150),
                 last_seen: None,
@@ -571,6 +894,40 @@ mod tests {
         assert_eq!(
             mark(&sim, barely_seen).map(|mark| mark.last_seen),
             Some(Some(Timestamp::from_seconds(101)))
+        );
+    }
+
+    #[test]
+    fn map_has_the_ground_seen_on_the_way_and_none_that_was_not() {
+        let mut world = World::default();
+        let heath = Vegetation::typical(VegetationKind::LichenHeath);
+        let patches = (0..10 * 50).map(|_| Patch::new(GroundType::Sand, Some(heath.clone()), 0));
+        world.set_terrain(Terrain::new(Location::new(-20_000, -100_000), 10, patches));
+        let tree = Subject::Thing(world.add_thing(birch(0, 80_000)));
+        let mut sim = simulation(world);
+        let known = |sim: &Simulation, x, y| {
+            let map = sim.view().map;
+            map.ground
+                .iter()
+                .any(|tile| tile.corner == Location::new(x, y))
+        };
+        assert!(known(&sim, 0, 0));
+        assert!(known(&sim, 0, 24_000));
+        assert!(!known(&sim, 0, 60_000));
+
+        sim.apply(Command::WalkTo(tree));
+        walk_until_done(&mut sim);
+
+        assert!(known(&sim, 0, 0));
+        assert!(known(&sim, 0, 60_000));
+        assert!(!known(&sim, 0, -40_000));
+        assert_eq!(
+            sim.view().map.ground.first(),
+            Some(&Tile {
+                corner: Location::new(-16_000, -28_000),
+                ground_type: GroundType::Sand,
+                vegetation: Some(VegetationKind::LichenHeath),
+            })
         );
     }
 

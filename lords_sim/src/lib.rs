@@ -1,7 +1,11 @@
+pub mod clothing;
+mod gather;
+pub mod item;
 pub mod map;
 pub mod memory;
 pub mod object;
 pub mod perception;
+mod random;
 mod route;
 mod simulation;
 pub mod space;
@@ -10,6 +14,7 @@ pub mod time;
 pub mod view;
 pub mod world;
 
+pub use crate::item::{Inventory, Item};
 pub use crate::object::{Human, Name, Sex};
 pub use crate::simulation::{Command, Simulation};
 pub use crate::space::{Bearing, Length, Location};

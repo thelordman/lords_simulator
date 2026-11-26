@@ -3,7 +3,7 @@ use crate::perception::{SIGHT_LIMIT, Seen};
 use crate::space::{Length, Location};
 use crate::time::Timestamp;
 use crate::world::index::Grid;
-use crate::world::{Area, AreaId, Kind, Subject, World};
+use crate::world::{Area, AreaId, GroundType, Kind, Subject, Vegetation, VegetationKind, World};
 
 /// How far the map reaches to the north, east, south, and west of the character.
 pub const RANGE: Length = SIGHT_LIMIT;
@@ -14,6 +14,7 @@ pub const RANGE: Length = SIGHT_LIMIT;
 pub struct Map {
     pub things: Vec<Mark>,
     pub waters: Vec<Water>,
+    pub ground: Vec<Tile>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -31,6 +32,15 @@ impl Mark {
     pub fn in_sight(&self) -> bool {
         self.last_seen.is_none()
     }
+}
+
+/// A patch of ground that has been seen.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Tile {
+    /// The south-west corner of the patch.
+    pub corner: Location,
+    pub ground_type: GroundType,
+    pub vegetation: Option<VegetationKind>,
 }
 
 /// The known part of a body of water.
@@ -146,5 +156,24 @@ pub(crate) fn chart(
         })
         .collect();
 
-    Map { things, waters }
+    Map {
+        things,
+        waters,
+        ground: ground(world, memory, eye),
+    }
+}
+
+/// Returns the patches of the terrain of `world` in range of `eye` that `memory` has seen.
+fn ground(world: &World, memory: &Memory, eye: Location) -> Vec<Tile> {
+    let terrain = world.terrain();
+
+    terrain
+        .around(eye, RANGE)
+        .filter(|(index, _)| memory.knows_patch(*index))
+        .map(|(index, patch)| Tile {
+            corner: terrain.corner_of(index),
+            ground_type: patch.ground_type(),
+            vegetation: patch.vegetation().map(Vegetation::kind),
+        })
+        .collect()
 }
